@@ -20,7 +20,7 @@ use Thelia\Model\ConfigQuery;
 use Thelia\Model\Folder;
 use Thelia\Model\FolderQuery;
 use Thelia\Model\Lang;
-use Thelia\Service\Model\LangService;
+use Thelia\Domain\Localization\LangService;
 
 readonly class FolderSEO implements SeoElementInterface
 {

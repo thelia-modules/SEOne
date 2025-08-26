@@ -20,7 +20,7 @@ use SEOne\SEOne;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Thelia\Model\ConfigQuery;
 use Thelia\Model\Lang;
-use Thelia\Service\Model\LangService;
+use Thelia\Domain\Localization\LangService;
 
 readonly class PageSEO implements SeoElementInterface
 {

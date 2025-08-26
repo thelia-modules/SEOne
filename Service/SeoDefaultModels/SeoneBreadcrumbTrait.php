@@ -20,7 +20,7 @@ use SEOne\Model\Map\SeoneI18nTableMap;
 use SEOne\Model\SeoneQuery;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Thelia\Model\LangQuery;
-use Thelia\Service\Model\LangService;
+use Thelia\Domain\Localization\LangService;
 
 trait SeoneBreadcrumbTrait
 {

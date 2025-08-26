@@ -22,7 +22,7 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Thelia\Model\ConfigQuery;
 use Thelia\Model\CountryQuery;
 use Thelia\Model\LangQuery;
-use Thelia\Service\Model\LangService;
+use Thelia\Domain\Localization\LangService;
 
 trait SEOneMicroDataTrait
 {

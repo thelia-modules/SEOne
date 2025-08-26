@@ -19,7 +19,8 @@ use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Thelia\Core\Event\Image\ImageEvent;
 use Thelia\Core\Event\TheliaEvents;
-use Thelia\Exception\TaxEngineException;
+use Thelia\Domain\Localization\LangService;
+use Thelia\Domain\Taxation\TaxEngine\TaxEngine;
 use Thelia\Model\Base\ProductCategoryQuery;
 use Thelia\Model\BrandI18nQuery;
 use Thelia\Model\ConfigQuery;
@@ -29,8 +30,6 @@ use Thelia\Model\ProductImageQuery;
 use Thelia\Model\ProductPriceQuery;
 use Thelia\Model\ProductQuery;
 use Thelia\Model\ProductSaleElementsQuery;
-use Thelia\Service\Model\LangService;
-use Thelia\TaxEngine\TaxEngine;
 
 readonly class ProductSEO implements SeoElementInterface
 {

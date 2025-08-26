@@ -19,12 +19,12 @@ use SEOne\Model\SeoneQuery;
 use SEOne\SEOne;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
+use Thelia\Domain\Localization\LangService;
 use Thelia\Model\Category;
 use Thelia\Model\CategoryQuery;
 use Thelia\Model\ConfigQuery;
 use Thelia\Model\Lang;
 use Thelia\Model\ProductQuery;
-use Thelia\Service\Model\LangService;
 
 readonly class CategorySEO implements SeoElementInterface
 {
@@ -33,7 +33,7 @@ readonly class CategorySEO implements SeoElementInterface
     public function __construct(
         LangService $langService,
         EventDispatcherInterface $eventDispatcher,
-        private RequestStack $requestStack,
+        private RequestStack $requestStack
     ) {
         $this->setDependencies(langService: $langService, dispatcher: $eventDispatcher);
     }

@@ -15,7 +15,7 @@ namespace SEOne\Service\SeoDefaultModels;
 use SEOne\SEOne;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Thelia\Model\ConfigQuery;
-use Thelia\Service\Model\LangService;
+use Thelia\Domain\Localization\LangService;
 
 readonly class DefaultSEO implements SeoElementInterface
 {

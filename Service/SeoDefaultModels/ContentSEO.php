@@ -21,7 +21,7 @@ use Thelia\Model\ContentFolderQuery;
 use Thelia\Model\ContentQuery;
 use Thelia\Model\FolderQuery;
 use Thelia\Model\Lang;
-use Thelia\Service\Model\LangService;
+use Thelia\Domain\Localization\LangService;
 
 readonly class ContentSEO implements SeoElementInterface
 {
