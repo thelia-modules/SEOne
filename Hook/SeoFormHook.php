@@ -18,6 +18,10 @@ class SeoFormHook extends BaseHook
                 [
                     'object_id' => $objectId,
                     'object_type' => $objectType,
+                    // The Smarty back-office exposes this as a global template variable, but the
+                    // hook can also be rendered from the Twig back-office where no such global
+                    // exists: always provide it explicitly.
+                    'edit_language_id' => $this->getSession()->getAdminEditionLang()->getId(),
                 ]
             )
         );

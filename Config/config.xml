@@ -17,6 +17,7 @@
         </hook>
         <hook id="seone.seo.update.form" class="SEOne\Hook\SeoUpdateFormHook">
             <tag name="hook.event_listener" event="tab-seo.update-form" type="backoffice" method="addInputs"/>
+            <argument type="service" id="Thelia\Core\Form\TheliaFormFactory" />
         </hook>
     </hooks>
 
