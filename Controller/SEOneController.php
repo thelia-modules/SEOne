@@ -19,7 +19,7 @@ use SEOne\Model\SeoneQuery;
 use SEOne\SEOne as SEOneModule;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Request;
-use Symfony\Component\Routing\Annotation\Route;
+use Symfony\Component\Routing\Attribute\Route;
 use Thelia\Controller\Admin\BaseAdminController;
 use Thelia\Model\LangQuery;
 use Thelia\Model\MetaDataQuery;
