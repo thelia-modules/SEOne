@@ -123,7 +123,7 @@ class SEOneMicroDataPluginTwig extends AbstractExtension
         return '<script type="application/ld+json">'.json_encode([
             '@context' => 'https://schema.org/',
             '@type' => 'BreadcrumbList',
-            'itemListElement' => array_merge($homeItem, $itemListElement),
+            'itemListElement' => array_merge([$homeItem], $itemListElement),
         ]).'</script>';
     }
 }

@@ -205,7 +205,12 @@ readonly class ProductSEO implements SeoElementInterface
         }
 
         if ($weight = $pse->getWeight()) {
-            $microData['shipping_weight'] = $weight.' kg';
+            $microData['weight'] = [
+                '@type' => 'QuantitativeValue',
+                'value' => (float) $weight,
+                'unitCode' => 'KGM',
+                'unitText' => 'kg',
+            ];
         }
 
         if ($relatedProducts) {
