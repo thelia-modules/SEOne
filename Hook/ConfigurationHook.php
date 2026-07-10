@@ -19,6 +19,8 @@ use Thelia\Tools\URL;
 
 class ConfigurationHook extends BaseHook
 {
+    use TemplateFallbackTrait;
+
     public function __construct(
         private readonly TheliaFormFactory $formFactory,
         ?EventDispatcherInterface $dispatcher = null,
