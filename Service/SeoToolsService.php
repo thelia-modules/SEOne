@@ -71,8 +71,7 @@ readonly class SeoToolsService
             event: $pageDescEvent,
             eventName: SEOnePageDescEvent::BETTER_SEO_PAGE_DESC
         );
-
-        return $pageDescEvent->getTitle() ?? '';
+        return $pageDescEvent->getDesc() ?? '';
     }
 
     public function getSeoMicroData(string $view, ?int $view_id, array $params = []): string
@@ -84,7 +83,7 @@ readonly class SeoToolsService
             eventName: SEOneMicroDataEvent::BETTER_SEO_MICRO_DATA
         );
 
-        return $microDataEvent->getTitle() ?? '';
+        return $microDataEvent->getData() ?? '';
     }
 
     public function getSeoBreadcrumb(string $view, ?int $view_id, array $params = []): array

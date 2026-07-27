@@ -45,8 +45,8 @@ readonly class SeoDefaultListener
 
     public function getSeoMicroData(SEOneMicroDataEvent $event): void
     {
-        $title = $this->defaultManager->getSeoMicroData($event->getViewId(), $event->getView(), $event->getParameters());
-        $event->setTitle($title);
+        $data = $this->defaultManager->getSeoMicroData($event->getViewId(), $event->getView(), $event->getParameters());
+        $event->setData($data);
     }
 
     public function getSeoBreadcrumb(SEOneBreadcrumbEvent $event): void
@@ -57,7 +57,7 @@ readonly class SeoDefaultListener
 
     public function getSeoPageDesc(SEOnePageDescEvent $event): void
     {
-        $title = $this->defaultManager->getSeoPageDesc($event->getViewId(), $event->getView());
-        $event->setTitle($title);
+        $desc = $this->defaultManager->getSeoPageDesc($event->getViewId(), $event->getView());
+        $event->setDesc($desc);
     }
 }

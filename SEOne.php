@@ -20,9 +20,9 @@ use Thelia\Module\BaseModule;
 
 class SEOne extends BaseModule
 {
-    public const DOMAIN_NAME = 'seone';
-    public const BETTER_SE0_LIMIT_CONFIG_KEY = 'seone_limit';
-    public const SEO_CANONICAL_META_KEY = 'seo_canonical_meta';
+    public const string DOMAIN_NAME = 'seone';
+    public const string BETTER_SE0_LIMIT_CONFIG_KEY = 'seone_limit';
+    public const string SEO_CANONICAL_META_KEY = 'seo_canonical_meta';
 
     public function postActivation(?ConnectionInterface $con = null): void
     {
@@ -62,7 +62,7 @@ class SEOne extends BaseModule
     public static function configureServices(ServicesConfigurator $servicesConfigurator): void
     {
         $servicesConfigurator->load(self::getModuleCode().'\\', __DIR__)
-            ->exclude([THELIA_MODULE_DIR . ucfirst(self::getModuleCode()). "/I18n/*"])
+            ->exclude([__DIR__.'/I18n/*'])
             ->autowire(true)
             ->autoconfigure(true);
     }
