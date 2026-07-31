@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace SEOne\Hook\Theme;
 
 use Thelia\Core\Hook\Theme\ThemeHookInterface;
@@ -21,7 +23,8 @@ final readonly class SEOneThemeHook implements ThemeHookInterface
     {
         return match ($hookName) {
             'layout.head.top' => $this->twig->render('@SEOneModule/theme-hook/head-top.html.twig',$parameters),
-            'layout.head.bottom' => $this->twig->render('@SEOneModule/theme-hook/head-bottom.html.twig',$parameters)
+            'layout.head.bottom' => $this->twig->render('@SEOneModule/theme-hook/head-bottom.html.twig',$parameters),
+            default => ''
         };
     }
 }
