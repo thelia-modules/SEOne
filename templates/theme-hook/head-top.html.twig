@@ -1,0 +1,19 @@
+{% set pageTitle = title|default(SEOnePageTitle()) %}
+{% set pageDesc = description|default(SEOnePageDesc()) %}
+{% set pageOgType = og_type|default('website') %}
+{% set canonical = SEOnePageCanonical() %}
+
+<title>{{ pageTitle }}</title>
+
+<meta name="description" content="{{ pageDesc }}">
+<link rel="canonical" href="{{ canonical }}"/>
+
+{{ SEOneBreadcrumbJsonLd(breadcrumb)|raw }}
+
+<meta property="og:type" content="{{ pageOgType }}">
+<meta property="og:url" content="{{ canonical }}">
+<meta property="og:title" content="{{ pageTitle }}">
+<meta property="og:description" content="{{ pageDesc }}">
+<meta name="twitter:title" content="{{ pageTitle }}">
+<meta name="twitter:description" content="{{ pageDesc }}">
+{{ SEOneHreflang()|raw }}

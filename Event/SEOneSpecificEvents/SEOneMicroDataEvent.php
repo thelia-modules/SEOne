@@ -16,11 +16,11 @@ use Thelia\Core\Event\ActionEvent;
 
 class SEOneMicroDataEvent extends ActionEvent
 {
-    protected string $title = '';
+    protected string $data = '';
     protected string $view;
     protected ?int $view_id;
     protected $parameters = [];
-    public const BETTER_SEO_MICRO_DATA = 'better.seo.page.micro.data';
+    public const string BETTER_SEO_MICRO_DATA = 'better.seo.page.micro.data';
 
     public function __construct(string $view, ?int $view_id, array $parameters)
     {
@@ -41,14 +41,14 @@ class SEOneMicroDataEvent extends ActionEvent
         return $this;
     }
 
-    public function getTitle(): string
+    public function getData(): string
     {
-        return $this->title;
+        return $this->data;
     }
 
-    public function setTitle(string $title): self
+    public function setData(string $data): self
     {
-        $this->title = $title;
+        $this->data = $data;
 
         return $this;
     }

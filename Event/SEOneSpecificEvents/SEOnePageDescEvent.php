@@ -16,11 +16,11 @@ use Thelia\Core\Event\ActionEvent;
 
 class SEOnePageDescEvent extends ActionEvent
 {
-    protected string $title = '';
+    protected string $desc = '';
     protected string $view;
     protected ?int $view_id;
 
-    public const BETTER_SEO_PAGE_DESC = 'better.seo.page.desc';
+    public const string BETTER_SEO_PAGE_DESC = 'better.seo.page.desc';
 
     public function __construct(string $view, ?int $view_id)
     {
@@ -28,14 +28,14 @@ class SEOnePageDescEvent extends ActionEvent
         $this->view_id = $view_id;
     }
 
-    public function getTitle(): string
+    public function getDesc(): string
     {
-        return $this->title;
+        return $this->desc;
     }
 
-    public function setTitle(string $title): self
+    public function setDesc(string $desc): self
     {
-        $this->title = $title;
+        $this->desc = $desc;
 
         return $this;
     }

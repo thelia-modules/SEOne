@@ -20,7 +20,7 @@ class SEOnePageTitleEvent extends ActionEvent
     protected string $view;
     protected ?int $view_id;
 
-    public const BETTER_SEO_PAGE_TITLE = 'better.seo.page.title';
+    public const string BETTER_SEO_PAGE_TITLE = 'better.seo.page.title';
 
     public function __construct(string $view, ?int $view_id)
     {
