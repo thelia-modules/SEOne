@@ -56,13 +56,17 @@ trait SEOneMicroDataTrait
 
             $storeMicroData = $storeEvent->getStoreMicrodata();
 
-            $viewEvent = new SEOneMicroDataEvent($microdata, $defaultType,
-                $objectId, $lang->getLocale());
+            // No microdata means the SEO target does not exist: the event requires an array, and
+            // there is nothing for listeners to enrich.
+            if (null !== $microdata) {
+                $viewEvent = new SEOneMicroDataEvent($microdata, $defaultType,
+                    $objectId, $lang->getLocale());
 
-            $this->dispatcher->dispatch(
-                $viewEvent,
-                SEOneMicroDataEvents::BETTER_SEO_MICRO_DATA);
-            $microdata = $viewEvent->getMicrodata();
+                $this->dispatcher->dispatch(
+                    $viewEvent,
+                    SEOneMicroDataEvents::BETTER_SEO_MICRO_DATA);
+                $microdata = $viewEvent->getMicrodata();
+            }
         }
 
         $query = SeoneQuery::create()
