@@ -55,9 +55,14 @@ readonly class FolderSEO implements SeoElementInterface
 
     public function getSeoMicroData($id, string $type, array $params = []): string
     {
+        $microdata = null;
+
         if ($id) {
             $folder = FolderQuery::create()->filterById($id)->findOne();
-            $microdata = $this->getFolderMicroData($folder, $this->langService->getLang());
+
+            if (null !== $folder) {
+                $microdata = $this->getFolderMicroData($folder, $this->langService->getLang());
+            }
         }
 
         return $this->getScriptsTag(microdata: $microdata, defaultType: $type, objectId: $id);
@@ -65,14 +70,14 @@ readonly class FolderSEO implements SeoElementInterface
 
     public function getSeoPageTitle($id): string
     {
-        $folder = FolderQuery::create()->filterById($id)->findOne()->setlocale($this->langService->getLocale());
+        $folder = FolderQuery::create()->filterById($id)->findOne()?->setlocale($this->langService->getLocale());
 
-        return $folder?->getMetaTitle() ?? $folder->getTitle() ?? SEOne::getConfigValue('title', ConfigQuery::read('store_name'), $this->langService->getLocale()) ?? '';
+        return $folder?->getMetaTitle() ?? $folder?->getTitle() ?? SEOne::getConfigValue('title', ConfigQuery::read('store_name'), $this->langService->getLocale()) ?? '';
     }
 
     public function getSeoPageDesc($id): string
     {
-        $folder = FolderQuery::create()->filterById($id)->findOne()->setlocale($this->langService->getLocale());
+        $folder = FolderQuery::create()->filterById($id)->findOne()?->setlocale($this->langService->getLocale());
 
         return $folder?->getMetaDescription() ?? SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $this->langService->getLocale()) ?? '';
     }
@@ -125,15 +130,21 @@ readonly class FolderSEO implements SeoElementInterface
 
     public function getFolderPath(int $fodlerId, ?array $path = []): array
     {
-        $folder = FolderQuery::create()->filterById($fodlerId)->findOne()->setlocale($this->langService->getLocale());
+        $folder = FolderQuery::create()->filterById($fodlerId)->findOne()?->setlocale($this->langService->getLocale());
+
+        if (null === $folder) {
+            return $path;
+        }
 
         $path[] = [
             'url' => $folder->getUrl(),
             'title' => $folder->getTitle(),
         ];
 
-        if ($folder->getParent() !== 0) {
-            $path = $this->getFolderPath($folder->getParent(), $path);
+        $parent = $folder->getParent();
+
+        if (null !== $parent && 0 !== $parent) {
+            $path = $this->getFolderPath($parent, $path);
         }
 
         return $path;

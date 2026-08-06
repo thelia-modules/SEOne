@@ -67,7 +67,10 @@ readonly class CategorySEO implements SeoElementInterface
             $limit = $params['limit'] ?? $request?->get('limit') ?? SEOne::getConfigValue(SEOne::BETTER_SE0_LIMIT_CONFIG_KEY);
 
             $category = CategoryQuery::create()->filterById($id)->findOne();
-            $microdata = $this->getCategoryMicroData($category, $this->langService->getLang(), $page, $limit);
+
+            if (null !== $category) {
+                $microdata = $this->getCategoryMicroData($category, $this->langService->getLang(), $page, $limit);
+            }
         }
 
         return $this->getScriptsTag($microdata, $type, $id);
@@ -86,14 +89,14 @@ readonly class CategorySEO implements SeoElementInterface
 
     public function getSeoPageTitle($id): string
     {
-        $category = CategoryQuery::create()->filterById($id)->findOne()->setlocale($this->langService->getLocale());
+        $category = CategoryQuery::create()->filterById($id)->findOne()?->setlocale($this->langService->getLocale());
 
         return $category?->getMetaTitle() ?? $category?->getTitle() ?? SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $this->langService->getLocale()) ?? '';
     }
 
     public function getSeoPageDesc($id): string
     {
-        $category = CategoryQuery::create()->filterById($id)->findOne()->setlocale($this->langService->getLocale());
+        $category = CategoryQuery::create()->filterById($id)->findOne()?->setlocale($this->langService->getLocale());
 
         return $category?->getMetaDescription() ?? SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $this->langService->getLocale()) ?? '';
     }
@@ -113,7 +116,8 @@ readonly class CategorySEO implements SeoElementInterface
         if (null !== $query && $query->getVirtualColumn('h1')) {
             return $query->getVirtualColumn('h1');
         }
-        $category = CategoryQuery::create()->filterById($id)->findOne()->setLocale($locale);
+        $category = CategoryQuery::create()->filterById($id)->findOne()?->setLocale($locale);
+
         return $category?->getTitle() ?? ConfigQuery::read('store_name') ?? '';
     }
 
@@ -156,15 +160,21 @@ readonly class CategorySEO implements SeoElementInterface
 
     public function getCategoryPath(int $categoryId, ?array $path = []): array
     {
-        $category = CategoryQuery::create()->filterById($categoryId)->findOne()->setlocale($this->langService->getLocale());
+        $category = CategoryQuery::create()->filterById($categoryId)->findOne()?->setlocale($this->langService->getLocale());
+
+        if (null === $category) {
+            return $path;
+        }
 
         $path[] = [
             'url' => $category->getUrl(),
             'title' => $category->getTitle(),
         ];
 
-        if ($category->getParent() !== 0) {
-            $path = $this->getCategoryPath($category->getParent(), $path);
+        $parent = $category->getParent();
+
+        if (null !== $parent && 0 !== $parent) {
+            $path = $this->getCategoryPath($parent, $path);
         }
 
         return $path;

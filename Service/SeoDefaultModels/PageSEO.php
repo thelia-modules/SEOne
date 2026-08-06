@@ -55,9 +55,14 @@ readonly class PageSEO implements SeoElementInterface
 
     public function getSeoMicroData($id, string $type, array $params = []): string
     {
+        $microdata = null;
+
         if ($id) {
             $page = PageQuery::create()->filterById($id)->findOne();
-            $microdata = $this->getPageMicroData($page, $this->langService->getLang());
+
+            if (null !== $page) {
+                $microdata = $this->getPageMicroData($page, $this->langService->getLang());
+            }
         }
 
         return $this->getScriptsTag(microdata: $microdata, defaultType: $type, objectId: $id);
@@ -65,14 +70,14 @@ readonly class PageSEO implements SeoElementInterface
 
     public function getSeoPageTitle($id): string
     {
-        $page = PageQuery::create()->filterById($id)->findOne()->setlocale($this->langService->getLocale());
+        $page = PageQuery::create()->filterById($id)->findOne()?->setlocale($this->langService->getLocale());
 
-        return $page?->getMetaTitle() ?? $page->getTitle() ?? SEOne::getConfigValue('title', ConfigQuery::read('store_name'), $this->langService->getLocale()) ?? '';
+        return $page?->getMetaTitle() ?? $page?->getTitle() ?? SEOne::getConfigValue('title', ConfigQuery::read('store_name'), $this->langService->getLocale()) ?? '';
     }
 
     public function getSeoPageDesc($id): string
     {
-        $page = PageQuery::create()->filterById($id)->findOne()->setlocale($this->langService->getLocale());
+        $page = PageQuery::create()->filterById($id)->findOne()?->setlocale($this->langService->getLocale());
 
         return $page?->getMetaDescription() ?? SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $this->langService->getLocale()) ?? '';
     }
@@ -117,12 +122,14 @@ readonly class PageSEO implements SeoElementInterface
         $breadcrumb = [];
 
         if ($id) {
-            $page = PageQuery::create()->filterById($id)->findOne()->setlocale($this->langService->getLocale());
+            $page = PageQuery::create()->filterById($id)->findOne()?->setlocale($this->langService->getLocale());
 
-            $breadcrumb[] = [
-                'url' => $page->getUrl(),
-                'title' => $page->getTitle(),
-            ];
+            if (null !== $page) {
+                $breadcrumb[] = [
+                    'url' => $page->getUrl(),
+                    'title' => $page->getTitle(),
+                ];
+            }
         }
 
         return $breadcrumb;

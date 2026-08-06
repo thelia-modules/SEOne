@@ -81,21 +81,21 @@ readonly class ProductSEO implements SeoElementInterface
         if (null !== $query && $query->getVirtualColumn('h1')) {
             return $query->getVirtualColumn('h1');
         }
-        $product = ProductQuery::create()->filterById($id)->findOne()->setlocale($locale);
+        $product = ProductQuery::create()->filterById($id)->findOne()?->setlocale($locale);
 
         return $product?->getTitle() ?? ConfigQuery::read('store_name') ?? '';
     }
 
     public function getSeoPageTitle($id): string
     {
-        $product = ProductQuery::create()->filterById($id)->findOne()->setlocale($this->langService->getLocale());
+        $product = ProductQuery::create()->filterById($id)->findOne()?->setlocale($this->langService->getLocale());
 
         return $product?->getMetaTitle() ?? $product?->getTitle() ?? SEOne::getConfigValue('title', ConfigQuery::read('store_name'), $this->langService->getLocale()) ?? '';
     }
 
     public function getSeoPageDesc($id): string
     {
-        $product = ProductQuery::create()->filterById($id)->findOne()->setlocale($this->langService->getLocale());
+        $product = ProductQuery::create()->filterById($id)->findOne()?->setlocale($this->langService->getLocale());
 
         return $product?->getMetaDescription() ?? SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $this->langService->getLocale()) ?? '';
     }
@@ -109,7 +109,7 @@ readonly class ProductSEO implements SeoElementInterface
         if (null !== $params && \array_key_exists('related_products', $params)) {
             $relatedProducts = \is_array($params['related_products']) ? $params['related_products'] : $this->explode($params['related_products']);
         }
-        $microdata = $this->getProductMicroData(
+        $microdata = null === $product ? null : $this->getProductMicroData(
             product: $product,
             lang: $this->langService->getLang(),
             relatedProducts: $relatedProducts
@@ -232,7 +232,11 @@ readonly class ProductSEO implements SeoElementInterface
                 ->filterByProductId($id)
                 ->findOne();
 
-            $product = $productCategory->getProduct()->setlocale($this->langService->getLocale());
+            $product = $productCategory?->getProduct()?->setlocale($this->langService->getLocale());
+
+            if (null === $product) {
+                return $breadcrumb;
+            }
 
             $breadcrumb[] = [
                 'url' => $product->getUrl(),

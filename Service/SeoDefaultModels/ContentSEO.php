@@ -67,14 +67,14 @@ readonly class ContentSEO implements SeoElementInterface
 
     public function getSeoPageTitle($id): string
     {
-        $content = ContentQuery::create()->filterById($id)->findOne()->setlocale($this->langService->getLocale());
+        $content = ContentQuery::create()->filterById($id)->findOne()?->setlocale($this->langService->getLocale());
 
         return $content?->getMetaTitle() ?? $content?->getTitle() ?? SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $this->langService->getLocale()) ?? '';
     }
 
     public function getSeoPageDesc($id): string
     {
-        $content = ContentQuery::create()->filterById($id)->findOne()->setlocale($this->langService->getLocale());
+        $content = ContentQuery::create()->filterById($id)->findOne()?->setlocale($this->langService->getLocale());
 
         return $content?->getMetaDescription() ?? SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $this->langService->getLocale()) ?? '';
     }
@@ -142,7 +142,11 @@ readonly class ContentSEO implements SeoElementInterface
                 ->filterByContentId($id)
                 ->findOne();
 
-            $content = $contentFolder->getContent()->setlocale($this->langService->getLocale());
+            $content = $contentFolder?->getContent()?->setlocale($this->langService->getLocale());
+
+            if (null === $content) {
+                return $breadcrumb;
+            }
 
             $breadcrumb[] = [
                 'url' => $content->getUrl(),
