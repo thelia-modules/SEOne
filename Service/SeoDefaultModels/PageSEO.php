@@ -35,7 +35,9 @@ readonly class PageSEO implements SeoElementInterface
 
     public function supports(string $view): bool
     {
-        return $view === $this->getView();
+        // The Page module is not a dependency of SEOne: without it, every query
+        // below is a fatal error, so hand the view over to the default SEO service.
+        return $view === $this->getView() && class_exists(PageQuery::class);
     }
 
     public function getIdentifier(): string
