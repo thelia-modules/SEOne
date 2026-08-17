@@ -17,6 +17,7 @@ use SEOne\Event\SEOneUrlEvents;
 use SEOne\Model\SeoneQuery;
 use SEOne\SEOne;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\HttpFoundation\Request as HttpRequest;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Thelia\Core\HttpFoundation\Request;
 use Thelia\Core\HttpFoundation\Session\Session;
@@ -76,9 +77,9 @@ class CanonicalUrlListener implements EventSubscriberInterface
             $canonicalUrl .= $path;
 
             $canonicalUrl = rtrim($canonicalUrl, '/');
-            $view = $request->get('_view');
+            $view = $this->inputValue($request, '_view');
 
-            $page = $request->get('page');
+            $page = $this->inputValue($request, 'page');
             if (null !== $page && $page !== '1' && \in_array($view, ['category', 'folder'])) {
                 $canonicalUrl .= '?page='.$page;
             }
@@ -212,20 +213,49 @@ class CanonicalUrlListener implements EventSubscriberInterface
         /** @var Request $request */
         $request = $this->requestStack->getCurrentRequest();
 
-        $view = $request->get('view');
+        $view = $this->inputValue($request, 'view');
         if (null === $view) {
-            $view = $request->get('_view');
+            $view = $this->inputValue($request, '_view');
         }
         if (null === $view) {
             return null;
         }
 
-        $id = $request->get($view.'_id');
+        $id = $this->inputValue($request, $view.'_id');
 
         if (null === $id) {
             return null;
         }
 
         return compact('view', 'id');
+    }
+
+    /**
+     * Reads a request input from the same sources, and in the same order, as the
+     * Request::get() this replaces (deprecated since Symfony 7.4).
+     *
+     * The three sources are all in use here: the routers put `_view` in the attributes,
+     * RewritingRouter puts `<view>_id` and the extra parameters such as `page` in the
+     * query, and a legacy `?view=...` URL or a posted form can carry either.
+     *
+     * Values are read through all(), like Request::get() did, so that a crafted
+     * `?page[]=1` yields no value instead of the HTTP 400 that InputBag::get() would
+     * raise on a front-office page.
+     *
+     * Typed against the base Symfony request on purpose: a sub-request rendered through
+     * render(controller(...)) is not a Thelia request, and this listener runs on whatever
+     * request is current.
+     */
+    private function inputValue(HttpRequest $request, string $key): ?string
+    {
+        foreach ([$request->attributes, $request->query, $request->request] as $bag) {
+            $value = $bag->all()[$key] ?? null;
+
+            if (is_scalar($value)) {
+                return (string) $value;
+            }
+        }
+
+        return null;
     }
 }
