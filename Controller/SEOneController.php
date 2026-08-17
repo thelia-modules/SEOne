@@ -38,11 +38,15 @@ class SEOneController extends BaseAdminController
 
         $seoForm = $this->validateForm($form);
 
-        $object_id = $request->get('object_id');
-        $object_type = $request->get('object_type');
+        // The back-office form posts to path('seone_seo_save', {object_id, object_type,
+        // lang_id}), so these three arrive in the query string, not in the body — reading
+        // them from the body only would break saving. Query first, then body, which is the
+        // order the Request::get() this replaces used.
+        $object_id = $request->query->get('object_id') ?? $request->request->get('object_id');
+        $object_type = $request->query->get('object_type') ?? $request->request->get('object_type');
 
         $lang = LangQuery::create()
-            ->filterById($request->get('lang_id'))
+            ->filterById($request->query->get('lang_id') ?? $request->request->get('lang_id'))
             ->findOne();
 
         if (null === $objectSeo = SeoneQuery::create()
