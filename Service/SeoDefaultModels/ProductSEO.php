@@ -33,6 +33,7 @@ use Thelia\Model\ProductSaleElementsQuery;
 
 readonly class ProductSEO implements SeoElementInterface
 {
+    use LocalizedValueTrait;
     use SEOneMicroDataTrait;
     use SmartyCompatibilityTrait;
 
@@ -81,23 +82,28 @@ readonly class ProductSEO implements SeoElementInterface
         if (null !== $query && $query->getVirtualColumn('h1')) {
             return $query->getVirtualColumn('h1');
         }
-        $product = ProductQuery::create()->filterById($id)->findOne()?->setlocale($locale);
+        $product = ProductQuery::create()->filterById($id)->findOne();
+        $title = $this->localizedValue($product, 'getTitle', $locale);
 
-        return $product?->getTitle() ?? ConfigQuery::read('store_name') ?? '';
+        return '' !== $title ? $title : (ConfigQuery::read('store_name') ?? '');
     }
 
     public function getSeoPageTitle($id): string
     {
-        $product = ProductQuery::create()->filterById($id)->findOne()?->setlocale($this->langService->getLocale());
+        $locale = $this->langService->getLocale();
+        $product = ProductQuery::create()->filterById($id)->findOne();
+        $title = $this->firstLocalizedValue($product, ['getMetaTitle', 'getTitle'], $locale);
 
-        return $product?->getMetaTitle() ?? $product?->getTitle() ?? SEOne::getConfigValue('title', ConfigQuery::read('store_name'), $this->langService->getLocale()) ?? '';
+        return '' !== $title ? $title : (SEOne::getConfigValue('title', ConfigQuery::read('store_name'), $locale) ?? '');
     }
 
     public function getSeoPageDesc($id): string
     {
-        $product = ProductQuery::create()->filterById($id)->findOne()?->setlocale($this->langService->getLocale());
+        $locale = $this->langService->getLocale();
+        $product = ProductQuery::create()->filterById($id)->findOne();
+        $description = $this->localizedValue($product, 'getMetaDescription', $locale);
 
-        return $product?->getMetaDescription() ?? SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $this->langService->getLocale()) ?? '';
+        return '' !== $description ? $description : (SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
     }
 
     public function getSeoMicroData($id, string $type, array $params = []): string
@@ -125,8 +131,9 @@ readonly class ProductSEO implements SeoElementInterface
     private function getProductMicroData(Product $product, Lang $lang, $relatedProducts = []): array
     {
         $request = $this->requestStack->getCurrentRequest();
+        $locale = $lang->getLocale();
 
-        $product->setLocale($lang->getLocale());
+        $product->setLocale($locale);
         $image = ProductImageQuery::create()->filterByProductId($product->getId())->orderByPosition()->find()->getFirst();
         $pse = ProductSaleElementsQuery::create()->filterByProductId($product->getId())->filterByIsDefault(1)->findOne();
         $psePrice = ProductPriceQuery::create()->filterByProductSaleElementsId($pse->getId())->findOne();
@@ -173,9 +180,9 @@ readonly class ProductSEO implements SeoElementInterface
         $microData = [
             '@context' => 'https://schema.org/',
             '@type' => 'Product',
-            'name' => $product->getTitle(),
+            'name' => $this->localizedValue($product, 'getTitle', $locale),
             'image' => $imagePath,
-            'description' => $product->getDescription(),
+            'description' => $this->localizedValue($product, 'getDescription', $locale),
             'sku' => $product->getRef(),
             'offers' => [
                 'url' => $product->getUrl(),
@@ -232,15 +239,16 @@ readonly class ProductSEO implements SeoElementInterface
                 ->filterByProductId($id)
                 ->findOne();
 
-            $product = $productCategory?->getProduct()?->setlocale($this->langService->getLocale());
+            $locale = $this->langService->getLocale();
+            $product = $productCategory?->getProduct();
 
             if (null === $product) {
                 return $breadcrumb;
             }
 
             $breadcrumb[] = [
-                'url' => $product->getUrl(),
-                'title' => $product->getTitle(),
+                'url' => $product->setLocale($locale)->getUrl(),
+                'title' => $this->localizedValue($product, 'getTitle', $locale),
             ];
             $breadcrumb = array_reverse($this->categorySEO->getCategoryPath($productCategory->getCategoryId(), $breadcrumb));
         }
