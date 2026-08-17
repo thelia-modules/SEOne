@@ -45,15 +45,14 @@ class SEOneMicroDataPluginTwig extends AbstractExtension
     {
         $defaultType = $view ?? $this->toolsService->getPageView() ?? '';
 
-        $defaultId = $id ?? $this->toolsService->getPageId($defaultType);
-
-        return $this->toolsService->getSeoPageTitle(view: $defaultType, view_id: $defaultId);
+        return $this->toolsService->getSeoPageTitle(view: $defaultType, view_id: $this->resolveViewId($defaultType, $id));
     }
 
     public function getSeoPageH1(?string $view = null, ?string $id = null): string
     {
         $defaultType = $view ?? $this->toolsService->getPageView() ?? '';
-        $defaultId = $id ?? $this->toolsService->getPageId($defaultType);
+        $defaultId = $this->resolveViewId($defaultType, $id);
+
         if (null === $defaultId) {
             return '';
         }
@@ -65,17 +64,18 @@ class SEOneMicroDataPluginTwig extends AbstractExtension
     {
         $defaultType = $view ?? $this->toolsService->getPageView() ?? '';
 
-        $defaultId = $id ?? $this->toolsService->getPageId($defaultType);
-
-        return $this->toolsService->getSeoPageDesc(view: $defaultType, view_id: $defaultId);
+        return $this->toolsService->getSeoPageDesc(view: $defaultType, view_id: $this->resolveViewId($defaultType, $id));
     }
 
     public function getSeoMicroData(?string $view = null, array $params = []): string
     {
         $defaultType = $view ?? $this->toolsService->getPageView() ?? '';
-        $defaultId = $params['id'] ?? $this->toolsService->getPageId($defaultType);
 
-        return $this->toolsService->getSeoMicroData(view: $defaultType, view_id: $defaultId, params: $params);
+        return $this->toolsService->getSeoMicroData(
+            view: $defaultType,
+            view_id: $this->resolveViewId($defaultType, $params['id'] ?? null),
+            params: $params
+        );
     }
 
     public function getSeoCanonical(): string
@@ -91,9 +91,24 @@ class SEOneMicroDataPluginTwig extends AbstractExtension
     public function getSeoBreadcrumb(?string $view = null, array $params = []): array
     {
         $defaultType = $view ?? $this->toolsService->getPageView() ?? '';
-        $defaultId = $params['id'] ?? $this->toolsService->getPageId($defaultType);
 
-        return $this->toolsService->getSeoBreadcrumb(view: $defaultType, view_id: $defaultId, params: $params);
+        return $this->toolsService->getSeoBreadcrumb(
+            view: $defaultType,
+            view_id: $this->resolveViewId($defaultType, $params['id'] ?? null),
+            params: $params
+        );
+    }
+
+    /**
+     * The view id reaches us as a string, either from the query string through getPageId()
+     * or from a template argument, while SeoToolsService expects ?int. Anything that is not
+     * a number means there is no SEO target to describe.
+     */
+    private function resolveViewId(string $view, mixed $id = null): ?int
+    {
+        $id ??= $this->toolsService->getPageId($view);
+
+        return is_numeric($id) ? (int) $id : null;
     }
 
     public function getSeoBreadcrumbJsonLd(?array $breadcrumb): string
