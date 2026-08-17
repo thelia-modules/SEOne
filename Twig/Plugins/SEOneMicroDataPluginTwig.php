@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of the Thelia package.
  * http://www.thelia.net
@@ -14,6 +16,7 @@ namespace SEOne\Twig\Plugins;
 
 use SEOne\Service\SeoToolsService;
 use Thelia\Model\ConfigQuery;
+use Thelia\Tools\URL;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFunction;
 
@@ -34,7 +37,7 @@ class SEOneMicroDataPluginTwig extends AbstractExtension
             new TwigFunction('SEOnePageCanonical', [$this, 'getSeoCanonical']),
             new TwigFunction('SEOneBreadcrumb', [$this, 'getSeoBreadcrumb']),
             new TwigFunction('SEOneBreadcrumbJsonLd', [$this, 'getSeoBreadcrumbJsonLd']),
-            new TwigFunction('SEOneHreflang', [$this, 'getHreflang'])
+            new TwigFunction('SEOneHreflang', [$this, 'getHreflang']),
         ];
     }
 
@@ -95,35 +98,61 @@ class SEOneMicroDataPluginTwig extends AbstractExtension
 
     public function getSeoBreadcrumbJsonLd(?array $breadcrumb): string
     {
-        if (!$breadcrumb || empty($breadcrumb)) {
+        if (empty($breadcrumb)) {
             return '';
         }
 
         $itemListElement = [];
-        $homeItem = [
-            '@type' => 'ListItem',
-            'position' => 1,
-            'item' => [
-                '@id' => ConfigQuery::read('url_site'),
-                'name' => ConfigQuery::read('store_name'),
-            ],
-        ];
+        $position = 1;
 
-        foreach ($breadcrumb as $key => $item) {
+        foreach (array_merge([$this->getHomeItem()], $breadcrumb) as $item) {
+            $name = $item['title'] ?? null;
+
+            if (null === $name || '' === $name) {
+                continue;
+            }
+
+            $url = $item['url'] ?? null;
+
+            // @id is optional for the current page, but must never be an empty string.
+            $itemNode = (null === $url || '' === $url) ? ['name' => $name] : ['@id' => $url, 'name' => $name];
+
+            // The position is assigned here, once the home item and the breadcrumb are
+            // merged, so that the list is numbered 1..n without duplicate or hole.
             $itemListElement[] = [
                 '@type' => 'ListItem',
-                'position' => $key + 1,
-                'item' => [
-                    '@id' => $item['url'],
-                    'name' => $item['title'],
-                ],
+                'position' => $position++,
+                'item' => $itemNode,
             ];
+        }
+
+        if ([] === $itemListElement) {
+            return '';
         }
 
         return '<script type="application/ld+json">'.json_encode([
             '@context' => 'https://schema.org/',
             '@type' => 'BreadcrumbList',
-            'itemListElement' => array_merge([$homeItem], $itemListElement),
+            'itemListElement' => $itemListElement,
         ]).'</script>';
+    }
+
+    /**
+     * @return array{url: ?string, title: ?string}
+     */
+    private function getHomeItem(): array
+    {
+        $url = ConfigQuery::read('url_site');
+
+        // url_site is often left empty in development: fall back to the URL the request
+        // came in on rather than emitting an empty @id.
+        if (null === $url || '' === $url) {
+            $url = URL::getInstance()->getIndexPage();
+        }
+
+        return [
+            'url' => $url,
+            'title' => ConfigQuery::read('store_name'),
+        ];
     }
 }
