@@ -193,7 +193,7 @@ class CanonicalUrlListener implements EventSubscriberInterface
         return $url;
     }
 
-    protected function getSiteBaseUrlForLocale(Lang $lang = null)
+    protected function getSiteBaseUrlForLocale(?Lang $lang = null)
     {
         if (null === $lang) {
             $lang = $this->requestStack->getCurrentRequest()->getSession()->getLang();
