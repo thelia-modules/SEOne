@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of the Thelia package.
  * http://www.thelia.net
@@ -19,6 +21,7 @@ class SEOneBreadcrumbEvent extends ActionEvent
     protected string $view;
     protected ?int $view_id;
     protected $parameters = [];
+    protected array $breadcrumb = [];
     public const BETTER_SEO_BREADCRUMB = 'seone.page.breadcrumb';
 
     public function __construct(string $view, ?int $view_id, ?array $parameters)

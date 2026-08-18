@@ -24,6 +24,7 @@ use Thelia\Model\Lang;
 
 readonly class FolderSEO implements SeoElementInterface
 {
+    use LocalizedValueTrait;
     use SEOneMicroDataTrait;
 
     public function __construct(
@@ -70,16 +71,20 @@ readonly class FolderSEO implements SeoElementInterface
 
     public function getSeoPageTitle($id): string
     {
-        $folder = FolderQuery::create()->filterById($id)->findOne()?->setlocale($this->langService->getLocale());
+        $locale = $this->langService->getLocale();
+        $folder = FolderQuery::create()->filterById($id)->findOne();
+        $title = $this->firstLocalizedValue($folder, ['getMetaTitle', 'getTitle'], $locale);
 
-        return $folder?->getMetaTitle() ?? $folder?->getTitle() ?? SEOne::getConfigValue('title', ConfigQuery::read('store_name'), $this->langService->getLocale()) ?? '';
+        return '' !== $title ? $title : (SEOne::getConfigValue('title', ConfigQuery::read('store_name'), $locale) ?? '');
     }
 
     public function getSeoPageDesc($id): string
     {
-        $folder = FolderQuery::create()->filterById($id)->findOne()?->setlocale($this->langService->getLocale());
+        $locale = $this->langService->getLocale();
+        $folder = FolderQuery::create()->filterById($id)->findOne();
+        $description = $this->localizedValue($folder, 'getMetaDescription', $locale);
 
-        return $folder?->getMetaDescription() ?? SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $this->langService->getLocale()) ?? '';
+        return '' !== $description ? $description : (SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
     }
 
     public function getSeoPageH1($id, string $type): string
@@ -97,21 +102,25 @@ readonly class FolderSEO implements SeoElementInterface
         if (null !== $query && $query->getVirtualColumn('h1')) {
             return $query->getVirtualColumn('h1');
         }
-        $folder = FolderQuery::create()->filterById($id)->useI18nQuery($locale)->endUse()->findOne();
+        // Plain lookup, not useI18nQuery(): an inner join on the requested locale would
+        // hide the folder entirely instead of letting the default language answer.
+        $folder = FolderQuery::create()->filterById($id)->findOne();
+        $title = $this->localizedValue($folder, 'getTitle', $locale);
 
-        return $folder?->getTitle() ?? ConfigQuery::read('store_name') ?? '';
+        return '' !== $title ? $title : (ConfigQuery::read('store_name') ?? '');
     }
 
     private function getFolderMicroData(Folder $folder, Lang $lang): array
     {
-        $folder->setLocale($lang->getLocale());
+        $locale = $lang->getLocale();
+        $folder->setLocale($locale);
 
         $microData = [
             '@context' => 'https://schema.org/',
             '@type' => 'Guide',
             'url' => $folder->getUrl(),
-            'name' => $folder->getTitle(),
-            'abstract' => $folder->getChapo(),
+            'name' => $this->localizedValue($folder, 'getTitle', $locale),
+            'abstract' => $this->localizedValue($folder, 'getChapo', $locale),
         ];
 
         return $microData;
@@ -130,15 +139,16 @@ readonly class FolderSEO implements SeoElementInterface
 
     public function getFolderPath(int $fodlerId, ?array $path = []): array
     {
-        $folder = FolderQuery::create()->filterById($fodlerId)->findOne()?->setlocale($this->langService->getLocale());
+        $locale = $this->langService->getLocale();
+        $folder = FolderQuery::create()->filterById($fodlerId)->findOne();
 
         if (null === $folder) {
             return $path;
         }
 
         $path[] = [
-            'url' => $folder->getUrl(),
-            'title' => $folder->getTitle(),
+            'url' => $folder->setLocale($locale)->getUrl(),
+            'title' => $this->localizedValue($folder, 'getTitle', $locale),
         ];
 
         $parent = $folder->getParent();

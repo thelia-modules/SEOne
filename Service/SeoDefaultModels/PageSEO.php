@@ -24,6 +24,7 @@ use Thelia\Model\Lang;
 
 readonly class PageSEO implements SeoElementInterface
 {
+    use LocalizedValueTrait;
     use SEOneMicroDataTrait;
 
     public function __construct(
@@ -72,16 +73,20 @@ readonly class PageSEO implements SeoElementInterface
 
     public function getSeoPageTitle($id): string
     {
-        $page = PageQuery::create()->filterById($id)->findOne()?->setlocale($this->langService->getLocale());
+        $locale = $this->langService->getLocale();
+        $page = PageQuery::create()->filterById($id)->findOne();
+        $title = $this->firstLocalizedValue($page, ['getMetaTitle', 'getTitle'], $locale);
 
-        return $page?->getMetaTitle() ?? $page?->getTitle() ?? SEOne::getConfigValue('title', ConfigQuery::read('store_name'), $this->langService->getLocale()) ?? '';
+        return '' !== $title ? $title : (SEOne::getConfigValue('title', ConfigQuery::read('store_name'), $locale) ?? '');
     }
 
     public function getSeoPageDesc($id): string
     {
-        $page = PageQuery::create()->filterById($id)->findOne()?->setlocale($this->langService->getLocale());
+        $locale = $this->langService->getLocale();
+        $page = PageQuery::create()->filterById($id)->findOne();
+        $description = $this->localizedValue($page, 'getMetaDescription', $locale);
 
-        return $page?->getMetaDescription() ?? SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $this->langService->getLocale()) ?? '';
+        return '' !== $description ? $description : (SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
     }
 
     public function getSeoPageH1($id, string $type): string
@@ -99,21 +104,25 @@ readonly class PageSEO implements SeoElementInterface
         if (null !== $query && $query->getVirtualColumn('h1')) {
             return $query->getVirtualColumn('h1');
         }
-        $page = PageQuery::create()->filterById($id)->useI18nQuery($locale)->endUse()->findOne();
+        // Plain lookup, not useI18nQuery(): an inner join on the requested locale would
+        // hide the page entirely instead of letting the default language answer.
+        $page = PageQuery::create()->filterById($id)->findOne();
+        $title = $this->localizedValue($page, 'getTitle', $locale);
 
-        return $page?->getTitle() ?? ConfigQuery::read('store_name') ?? '';
+        return '' !== $title ? $title : (ConfigQuery::read('store_name') ?? '');
     }
 
     private function getPageMicroData(Page $page, Lang $lang): array
     {
-        $page->setLocale($lang->getLocale());
+        $locale = $lang->getLocale();
+        $page->setLocale($locale);
 
         $microData = [
             '@context' => 'https://schema.org/',
             '@type' => 'Guide',
             'url' => $page->getUrl(),
-            'name' => $page->getTitle(),
-            'abstract' => $page->getChapo(),
+            'name' => $this->localizedValue($page, 'getTitle', $locale),
+            'abstract' => $this->localizedValue($page, 'getChapo', $locale),
         ];
 
         return $microData;
@@ -124,12 +133,13 @@ readonly class PageSEO implements SeoElementInterface
         $breadcrumb = [];
 
         if ($id) {
-            $page = PageQuery::create()->filterById($id)->findOne()?->setlocale($this->langService->getLocale());
+            $locale = $this->langService->getLocale();
+            $page = PageQuery::create()->filterById($id)->findOne();
 
             if (null !== $page) {
                 $breadcrumb[] = [
-                    'url' => $page->getUrl(),
-                    'title' => $page->getTitle(),
+                    'url' => $page->setLocale($locale)->getUrl(),
+                    'title' => $this->localizedValue($page, 'getTitle', $locale),
                 ];
             }
         }

@@ -25,6 +25,7 @@ use Thelia\Model\Lang;
 
 readonly class ContentSEO implements SeoElementInterface
 {
+    use LocalizedValueTrait;
     use SEOneMicroDataTrait;
 
     public function __construct(
@@ -67,16 +68,20 @@ readonly class ContentSEO implements SeoElementInterface
 
     public function getSeoPageTitle($id): string
     {
-        $content = ContentQuery::create()->filterById($id)->findOne()?->setlocale($this->langService->getLocale());
+        $locale = $this->langService->getLocale();
+        $content = ContentQuery::create()->filterById($id)->findOne();
+        $title = $this->firstLocalizedValue($content, ['getMetaTitle', 'getTitle'], $locale);
 
-        return $content?->getMetaTitle() ?? $content?->getTitle() ?? SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $this->langService->getLocale()) ?? '';
+        return '' !== $title ? $title : (SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
     }
 
     public function getSeoPageDesc($id): string
     {
-        $content = ContentQuery::create()->filterById($id)->findOne()?->setlocale($this->langService->getLocale());
+        $locale = $this->langService->getLocale();
+        $content = ContentQuery::create()->filterById($id)->findOne();
+        $description = $this->localizedValue($content, 'getMetaDescription', $locale);
 
-        return $content?->getMetaDescription() ?? SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $this->langService->getLocale()) ?? '';
+        return '' !== $description ? $description : (SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
     }
 
     public function getSeoPageH1($id, string $type): string
@@ -94,9 +99,12 @@ readonly class ContentSEO implements SeoElementInterface
         if (null !== $query && $query->getVirtualColumn('h1')) {
             return $query->getVirtualColumn('h1');
         }
-        $content = ContentQuery::create()->filterById($id)->useI18nQuery($locale)->endUse()->findOne();
+        // Plain lookup, not useI18nQuery(): an inner join on the requested locale would
+        // hide the content entirely instead of letting the default language answer.
+        $content = ContentQuery::create()->filterById($id)->findOne();
+        $title = $this->localizedValue($content, 'getTitle', $locale);
 
-        return $content?->getTitle() ?? ConfigQuery::read('store_name') ?? '';
+        return '' !== $title ? $title : (ConfigQuery::read('store_name') ?? '');
     }
 
     private function getContentMicroData($contentId, Lang $lang): ?array
@@ -107,14 +115,15 @@ readonly class ContentSEO implements SeoElementInterface
             return null;
         }
 
-        $content->setLocale($lang->getLocale());
+        $locale = $lang->getLocale();
+        $content->setLocale($locale);
 
         $microData = [
             '@context' => 'https://schema.org/',
             '@type' => 'Article',
             'url' => $content->getUrl(),
-            'name' => $content->getTitle(),
-            'abstract' => $content->getChapo(),
+            'name' => $this->localizedValue($content, 'getTitle', $locale),
+            'abstract' => $this->localizedValue($content, 'getChapo', $locale),
         ];
 
         $defaultFoIdlder = $content->getDefaultFolderId();
@@ -122,9 +131,9 @@ readonly class ContentSEO implements SeoElementInterface
         if (null !== $defaultFoIdlder) {
             $default_folder = FolderQuery::create()->findOneById($defaultFoIdlder);
             if (null !== $default_folder) {
-                $default_folder->setLocale($lang->getLocale());
+                $default_folder->setLocale($locale);
                 $microData['isPartOf'] = [
-                    'name' => $default_folder->getTitle(),
+                    'name' => $this->localizedValue($default_folder, 'getTitle', $locale),
                     'url' => $default_folder->getUrl(),
                 ];
             }
@@ -142,15 +151,16 @@ readonly class ContentSEO implements SeoElementInterface
                 ->filterByContentId($id)
                 ->findOne();
 
-            $content = $contentFolder?->getContent()?->setlocale($this->langService->getLocale());
+            $locale = $this->langService->getLocale();
+            $content = $contentFolder?->getContent();
 
             if (null === $content) {
                 return $breadcrumb;
             }
 
             $breadcrumb[] = [
-                'url' => $content->getUrl(),
-                'title' => $content->getTitle(),
+                'url' => $content->setLocale($locale)->getUrl(),
+                'title' => $this->localizedValue($content, 'getTitle', $locale),
             ];
             $breadcrumb = array_reverse($this->folderSeo->getFolderPath($contentFolder->getFolderId(), $breadcrumb));
         }
