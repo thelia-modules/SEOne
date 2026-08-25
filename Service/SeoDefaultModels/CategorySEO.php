@@ -25,6 +25,7 @@ use Thelia\Model\CategoryQuery;
 use Thelia\Model\ConfigQuery;
 use Thelia\Model\Lang;
 use Thelia\Model\ProductQuery;
+use Thelia\Tools\URL;
 
 readonly class CategorySEO implements SeoElementInterface
 {
@@ -129,9 +130,23 @@ readonly class CategorySEO implements SeoElementInterface
 
     private function getCategoryMicroData(Category $category, Lang $lang, $page, $limit)
     {
-        $category->setLocale($lang->getLocale());
+        $locale = $lang->getLocale();
+        $category->setLocale($locale);
 
         $products = $this->getProduct($category, $page, $limit);
+
+        // A freshly hydrated model answers getUrl() in its own default locale, not the
+        // page's, so the lookups missed the rewritten urls and each item paid its own
+        // query. Resolve them in the page's locale, in one batch where the core offers it.
+        $productIds = [];
+        foreach ($products as $product) {
+            $productIds[] = $product->getId();
+        }
+
+        $url = URL::getInstance();
+        if ([] !== $productIds && method_exists($url, 'preloadRewrittenUrls')) {
+            $url->preloadRewrittenUrls('product', $locale, $productIds);
+        }
 
         $itemListElement = [];
 
@@ -140,14 +155,14 @@ readonly class CategorySEO implements SeoElementInterface
             $itemListElement[] = [
                 '@type' => 'ListItem',
                 'position' => $i++,
-                'url' => $product->getUrl(),
+                'url' => $product->getUrl($locale),
             ];
         }
 
         $microData = [
             '@context' => 'https://schema.org/',
             '@type' => 'ItemList',
-            'url' => $category->getUrl(),
+            'url' => $category->getUrl($locale),
             'numberOfItems' => \count($products),
             'itemListElement' => $itemListElement,
         ];
