@@ -12,9 +12,8 @@
 
 namespace SEOne\Service\SeoDefaultModels;
 
-use SEOne\Model\Map\SeoneI18nTableMap;
-use SEOne\Model\SeoneQuery;
 use SEOne\SEOne;
+use SEOne\Service\SeoRequestMemo;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Thelia\Core\Event\Image\ImageEvent;
@@ -40,11 +39,12 @@ readonly class ProductSEO implements SeoElementInterface
     public function __construct(
         LangService $langService,
         EventDispatcherInterface $eventDispatcher,
+        SeoRequestMemo $seoRequestMemo,
         private RequestStack $requestStack,
         private TaxEngine $taxEngine,
         private CategorySEO $categorySEO,
     ) {
-        $this->setDependencies(langService: $langService, dispatcher: $eventDispatcher);
+        $this->setDependencies(langService: $langService, dispatcher: $eventDispatcher, seoRequestMemo: $seoRequestMemo);
     }
 
     public function supports(string $view): bool
@@ -70,19 +70,12 @@ readonly class ProductSEO implements SeoElementInterface
     public function getSeoPageH1($id, string $type): string
     {
         $locale = $this->langService->getLocale();
-        $query = SeoneQuery::create()
-            ->filterByObjectId($id)
-            ->filterByObjectType($type)
-            ->useSEOneI18nQuery()
-            ->filterByLocale($locale)
-            ->endUse()
-            ->withColumn(SeoneI18nTableMap::COL_H1, 'h1')
-            ->findOne();
+        $query = $this->seoRow($type, $id, $locale);
 
         if (null !== $query && $query->getVirtualColumn('h1')) {
             return $query->getVirtualColumn('h1');
         }
-        $product = ProductQuery::create()->filterById($id)->findOne();
+        $product = ProductQuery::create()->findPk($id);
         $title = $this->localizedValue($product, 'getTitle', $locale);
 
         return '' !== $title ? $title : (ConfigQuery::read('store_name') ?? '');
@@ -91,7 +84,7 @@ readonly class ProductSEO implements SeoElementInterface
     public function getSeoPageTitle($id): string
     {
         $locale = $this->langService->getLocale();
-        $product = ProductQuery::create()->filterById($id)->findOne();
+        $product = ProductQuery::create()->findPk($id);
         $title = $this->firstLocalizedValue($product, ['getMetaTitle', 'getTitle'], $locale);
 
         return '' !== $title ? $title : (SEOne::getConfigValue('title', ConfigQuery::read('store_name'), $locale) ?? '');
@@ -100,7 +93,7 @@ readonly class ProductSEO implements SeoElementInterface
     public function getSeoPageDesc($id): string
     {
         $locale = $this->langService->getLocale();
-        $product = ProductQuery::create()->filterById($id)->findOne();
+        $product = ProductQuery::create()->findPk($id);
         $description = $this->localizedValue($product, 'getMetaDescription', $locale);
 
         return '' !== $description ? $description : (SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
@@ -109,7 +102,7 @@ readonly class ProductSEO implements SeoElementInterface
     public function getSeoMicroData($id, string $type, array $params = []): string
     {
         $objectId = $params['id'] ?? $id;
-        $product = ProductQuery::create()->filterById($objectId)->findOne();
+        $product = ProductQuery::create()->findPk($objectId);
         $relatedProducts = null;
 
         if (null !== $params && \array_key_exists('related_products', $params)) {
@@ -222,7 +215,7 @@ readonly class ProductSEO implements SeoElementInterface
 
         if ($relatedProducts) {
             foreach ($relatedProducts as $relatedProductId) {
-                $relatedProduct = ProductQuery::create()->filterById($relatedProductId)->findOne();
+                $relatedProduct = ProductQuery::create()->findPk($relatedProductId);
                 $microData['isRelatedTo'][] = $this->getProductMicroData(product: $relatedProduct, lang: $lang);
             }
         }

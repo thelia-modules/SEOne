@@ -13,6 +13,7 @@
 namespace SEOne\Service\SeoDefaultModels;
 
 use SEOne\SEOne;
+use SEOne\Service\SeoRequestMemo;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Thelia\Domain\Localization\Service\LangService;
 use Thelia\Model\ConfigQuery;
@@ -24,8 +25,9 @@ readonly class DefaultSEO implements SeoElementInterface
     public function __construct(
         LangService $langService,
         EventDispatcherInterface $eventDispatcher,
+        SeoRequestMemo $seoRequestMemo,
     ) {
-        $this->setDependencies(langService: $langService, dispatcher: $eventDispatcher);
+        $this->setDependencies(langService: $langService, dispatcher: $eventDispatcher, seoRequestMemo: $seoRequestMemo);
     }
 
     public function supports(string $view): bool

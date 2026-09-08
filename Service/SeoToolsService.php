@@ -23,7 +23,7 @@ use SEOne\Event\SEOneUrlEvents;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
-use Thelia\Model\Base\LangQuery;
+use Thelia\Model\Lang;
 
 readonly class SeoToolsService
 {
@@ -137,9 +137,15 @@ readonly class SeoToolsService
 
         $currentLocale = $request->getSession()->getLang()->getLocale();
 
-        $langs = LangQuery::create()
-            ->filterByVisible(true)
-            ->find();
+        // The active languages are already in memory once per request (Lang::getActiveLangs),
+        // so the visible ones cost no query of their own. A language that is not active is
+        // not served by the front office: an alternate link to it would point nowhere.
+        $langs = [];
+        foreach (Lang::getActiveLangs() as $activeLang) {
+            if ($activeLang->getVisible()) {
+                $langs[] = $activeLang;
+            }
+        }
 
         $metas = [];
 

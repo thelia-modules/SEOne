@@ -16,9 +16,9 @@ use SEOne\Event\SEOneMicroDataEvent;
 use SEOne\Event\SEOneMicroDataEvents;
 use SEOne\Event\SEOneStoreMicroDataEvent;
 use SEOne\Event\SEOneStoreMicroDataEvents;
-use SEOne\Model\Map\SeoneI18nTableMap;
-use SEOne\Model\SeoneQuery;
+use SEOne\Model\Seone as SeoneModel;
 use SEOne\SEOne;
+use SEOne\Service\SeoRequestMemo;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Thelia\Model\ConfigQuery;
 use Thelia\Model\CountryQuery;
@@ -29,11 +29,26 @@ trait SEOneMicroDataTrait
 {
     private readonly LangService $langService;
     private readonly EventDispatcherInterface $dispatcher;
+    private readonly ?SeoRequestMemo $seoRequestMemo;
 
-    public function setDependencies(LangService $langService, EventDispatcherInterface $dispatcher): void
+    public function setDependencies(LangService $langService, EventDispatcherInterface $dispatcher, ?SeoRequestMemo $seoRequestMemo = null): void
     {
         $this->langService = $langService;
         $this->dispatcher = $dispatcher;
+        $this->seoRequestMemo = $seoRequestMemo;
+    }
+
+    /**
+     * The SEO row of the object, read once per request. Without the memo — a caller that
+     * built the service by hand — the read happens as before.
+     */
+    private function seoRow(?string $objectType, $objectId, string $locale): ?SeoneModel
+    {
+        if (null === $this->seoRequestMemo) {
+            return (new SeoRequestMemo())->getRow($objectType, $objectId, $locale);
+        }
+
+        return $this->seoRequestMemo->getRow($objectType, $objectId, $locale);
     }
 
     private function getScriptsTag($microdata, ?string $defaultType, $objectId = null): string
@@ -69,17 +84,7 @@ trait SEOneMicroDataTrait
             }
         }
 
-        $query = SeoneQuery::create()
-            ->filterByObjectId($objectId)
-            ->filterByObjectType($defaultType)
-            ->useSEOneI18nQuery()
-            ->filterByLocale($this->langService->getLocale())
-            ->endUse()
-            ->withColumn(SeoneI18nTableMap::COL_NOINDEX, 'noindex')
-            ->withColumn(SeoneI18nTableMap::COL_NOFOLLOW, 'nofollow')
-            ->withColumn(SeoneI18nTableMap::COL_H1, 'h1')
-            ->withColumn(SeoneI18nTableMap::COL_JSON_DATA, 'json_data')
-            ->findOne();
+        $query = $this->seoRow($defaultType, $objectId, $this->langService->getLocale());
 
         if (null !== $query) {
             if ($query->getVirtualColumn('noindex') === 1 && $query->getVirtualColumn('nofollow') === 1) {
@@ -105,7 +110,7 @@ trait SEOneMicroDataTrait
 
     private function getStoreMicroData(): array
     {
-        $country = CountryQuery::create()->filterById(ConfigQuery::read('store_country', 64))->findOne();
+        $country = CountryQuery::create()->findPk(ConfigQuery::read('store_country', 64));
         $microData = [
             '@context' => 'https://schema.org/',
             '@type' => 'Organization',

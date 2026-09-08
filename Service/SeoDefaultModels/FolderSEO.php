@@ -12,9 +12,8 @@
 
 namespace SEOne\Service\SeoDefaultModels;
 
-use SEOne\Model\Map\SeoneI18nTableMap;
-use SEOne\Model\SeoneQuery;
 use SEOne\SEOne;
+use SEOne\Service\SeoRequestMemo;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Thelia\Domain\Localization\Service\LangService;
 use Thelia\Model\ConfigQuery;
@@ -30,8 +29,9 @@ readonly class FolderSEO implements SeoElementInterface
     public function __construct(
         LangService $langService,
         EventDispatcherInterface $eventDispatcher,
+        SeoRequestMemo $seoRequestMemo,
     ) {
-        $this->setDependencies(langService: $langService, dispatcher: $eventDispatcher);
+        $this->setDependencies(langService: $langService, dispatcher: $eventDispatcher, seoRequestMemo: $seoRequestMemo);
     }
 
     public function supports(string $view): bool
@@ -59,7 +59,7 @@ readonly class FolderSEO implements SeoElementInterface
         $microdata = null;
 
         if ($id) {
-            $folder = FolderQuery::create()->filterById($id)->findOne();
+            $folder = FolderQuery::create()->findPk($id);
 
             if (null !== $folder) {
                 $microdata = $this->getFolderMicroData($folder, $this->langService->getLang());
@@ -72,7 +72,7 @@ readonly class FolderSEO implements SeoElementInterface
     public function getSeoPageTitle($id): string
     {
         $locale = $this->langService->getLocale();
-        $folder = FolderQuery::create()->filterById($id)->findOne();
+        $folder = FolderQuery::create()->findPk($id);
         $title = $this->firstLocalizedValue($folder, ['getMetaTitle', 'getTitle'], $locale);
 
         return '' !== $title ? $title : (SEOne::getConfigValue('title', ConfigQuery::read('store_name'), $locale) ?? '');
@@ -81,7 +81,7 @@ readonly class FolderSEO implements SeoElementInterface
     public function getSeoPageDesc($id): string
     {
         $locale = $this->langService->getLocale();
-        $folder = FolderQuery::create()->filterById($id)->findOne();
+        $folder = FolderQuery::create()->findPk($id);
         $description = $this->localizedValue($folder, 'getMetaDescription', $locale);
 
         return '' !== $description ? $description : (SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
@@ -90,21 +90,14 @@ readonly class FolderSEO implements SeoElementInterface
     public function getSeoPageH1($id, string $type): string
     {
         $locale = $this->langService->getLocale();
-        $query = SeoneQuery::create()
-            ->filterByObjectId($id)
-            ->filterByObjectType($type)
-            ->useSEOneI18nQuery()
-            ->filterByLocale($locale)
-            ->endUse()
-            ->withColumn(SeoneI18nTableMap::COL_H1, 'h1')
-            ->findOne();
+        $query = $this->seoRow($type, $id, $locale);
 
         if (null !== $query && $query->getVirtualColumn('h1')) {
             return $query->getVirtualColumn('h1');
         }
         // Plain lookup, not useI18nQuery(): an inner join on the requested locale would
         // hide the folder entirely instead of letting the default language answer.
-        $folder = FolderQuery::create()->filterById($id)->findOne();
+        $folder = FolderQuery::create()->findPk($id);
         $title = $this->localizedValue($folder, 'getTitle', $locale);
 
         return '' !== $title ? $title : (ConfigQuery::read('store_name') ?? '');
@@ -140,7 +133,7 @@ readonly class FolderSEO implements SeoElementInterface
     public function getFolderPath(int $fodlerId, ?array $path = []): array
     {
         $locale = $this->langService->getLocale();
-        $folder = FolderQuery::create()->filterById($fodlerId)->findOne();
+        $folder = FolderQuery::create()->findPk($fodlerId);
 
         if (null === $folder) {
             return $path;
