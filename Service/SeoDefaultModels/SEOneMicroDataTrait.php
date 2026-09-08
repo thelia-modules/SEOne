@@ -51,6 +51,18 @@ trait SEOneMicroDataTrait
         return $this->seoRequestMemo->getRow($objectType, $objectId, $locale);
     }
 
+    /**
+     * A module setting, read once per request (see {@see SeoRequestMemo::getConfigValue()}).
+     */
+    private function seoConfigValue(string $name, ?string $default = null, ?string $locale = null): ?string
+    {
+        if (null === $this->seoRequestMemo) {
+            return SEOne::getConfigValue($name, $default, $locale);
+        }
+
+        return $this->seoRequestMemo->getConfigValue($name, $default, $locale);
+    }
+
     private function getScriptsTag($microdata, ?string $defaultType, $objectId = null): string
     {
         $scriptsTag = '';
@@ -115,7 +127,7 @@ trait SEOneMicroDataTrait
             '@context' => 'https://schema.org/',
             '@type' => 'Organization',
             'name' => ConfigQuery::read('store_name'),
-            'description' => SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $this->langService->getLocale()),
+            'description' => $this->seoConfigValue('description', ConfigQuery::read('store_description'), $this->langService->getLocale()),
             'url' => ConfigQuery::read('url_site'),
             'address' => [
                 '@type' => 'PostalAddress',

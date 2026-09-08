@@ -66,7 +66,7 @@ readonly class CategorySEO implements SeoElementInterface
         if ($id) {
             $request = $this->requestStack->getCurrentRequest();
             $page = $params['page'] ?? $request?->get('page') ?? 1;
-            $limit = $params['limit'] ?? $request?->get('limit') ?? SEOne::getConfigValue(SEOne::BETTER_SE0_LIMIT_CONFIG_KEY);
+            $limit = $params['limit'] ?? $request?->get('limit') ?? $this->seoConfigValue(SEOne::BETTER_SE0_LIMIT_CONFIG_KEY);
 
             $category = CategoryQuery::create()->findPk($id);
 
@@ -95,7 +95,7 @@ readonly class CategorySEO implements SeoElementInterface
         $category = CategoryQuery::create()->findPk($id);
         $title = $this->firstLocalizedValue($category, ['getMetaTitle', 'getTitle'], $locale);
 
-        return '' !== $title ? $title : (SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
+        return '' !== $title ? $title : ($this->seoConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
     }
 
     public function getSeoPageDesc($id): string
@@ -104,7 +104,7 @@ readonly class CategorySEO implements SeoElementInterface
         $category = CategoryQuery::create()->findPk($id);
         $description = $this->localizedValue($category, 'getMetaDescription', $locale);
 
-        return '' !== $description ? $description : (SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
+        return '' !== $description ? $description : ($this->seoConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
     }
 
     public function getSeoPageH1($id, string $type): string

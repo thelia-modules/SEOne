@@ -17,6 +17,7 @@ use SEOne\Event\SEOneMicroDataEvents;
 use SEOne\Event\SEOneStoreMicroDataEvent;
 use SEOne\Event\SEOneStoreMicroDataEvents;
 use SEOne\Model\Seone as SeoneModel;
+use SEOne\SEOne;
 use SEOne\Service\SeoRequestMemo;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Thelia\Domain\Localization\Service\LangService;
@@ -46,6 +47,18 @@ trait SeoneBreadcrumbTrait
         }
 
         return $this->seoRequestMemo->getRow($objectType, $objectId, $locale);
+    }
+
+    /**
+     * A module setting, read once per request (see {@see SeoRequestMemo::getConfigValue()}).
+     */
+    private function seoConfigValue(string $name, ?string $default = null, ?string $locale = null): ?string
+    {
+        if (null === $this->seoRequestMemo) {
+            return SEOne::getConfigValue($name, $default, $locale);
+        }
+
+        return $this->seoRequestMemo->getConfigValue($name, $default, $locale);
     }
 
     private function getStoreMicroData(): array

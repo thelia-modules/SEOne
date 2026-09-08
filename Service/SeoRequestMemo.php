@@ -17,10 +17,11 @@ namespace SEOne\Service;
 use SEOne\Model\Map\SeoneI18nTableMap;
 use SEOne\Model\Seone;
 use SEOne\Model\SeoneQuery;
+use SEOne\SEOne as SeoneModule;
 use Symfony\Contracts\Service\ResetInterface;
 
 /**
- * The SEO row of one object, read once per request.
+ * The SEO row of one object and the module settings, read once per request.
  *
  * Rendering a single page asks for the same row several times — the h1 of the page, then
  * the robots meta and the extra JSON-LD of the same object — and each of those was a
@@ -36,6 +37,11 @@ class SeoRequestMemo implements ResetInterface
      * @var array<string, Seone|null>
      */
     private array $rows = [];
+
+    /**
+     * @var array<string, string|null>
+     */
+    private array $configValues = [];
 
     public function getRow(?string $objectType, int|string|null $objectId, string $locale): ?Seone
     {
@@ -58,8 +64,24 @@ class SeoRequestMemo implements ResetInterface
             ->findOne();
     }
 
+    /**
+     * A module setting, read once per request. The default is applied on read, so two
+     * callers asking for the same setting with different defaults still get their own.
+     */
+    public function getConfigValue(string $name, ?string $default = null, ?string $locale = null): ?string
+    {
+        $key = $name.'|'.$locale;
+
+        if (!\array_key_exists($key, $this->configValues)) {
+            $this->configValues[$key] = SeoneModule::getConfigValue($name, null, $locale);
+        }
+
+        return $this->configValues[$key] ?? $default;
+    }
+
     public function reset(): void
     {
         $this->rows = [];
+        $this->configValues = [];
     }
 }

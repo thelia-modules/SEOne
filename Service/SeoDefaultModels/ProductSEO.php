@@ -12,7 +12,6 @@
 
 namespace SEOne\Service\SeoDefaultModels;
 
-use SEOne\SEOne;
 use SEOne\Service\SeoRequestMemo;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -87,7 +86,7 @@ readonly class ProductSEO implements SeoElementInterface
         $product = ProductQuery::create()->findPk($id);
         $title = $this->firstLocalizedValue($product, ['getMetaTitle', 'getTitle'], $locale);
 
-        return '' !== $title ? $title : (SEOne::getConfigValue('title', ConfigQuery::read('store_name'), $locale) ?? '');
+        return '' !== $title ? $title : ($this->seoConfigValue('title', ConfigQuery::read('store_name'), $locale) ?? '');
     }
 
     public function getSeoPageDesc($id): string
@@ -96,7 +95,7 @@ readonly class ProductSEO implements SeoElementInterface
         $product = ProductQuery::create()->findPk($id);
         $description = $this->localizedValue($product, 'getMetaDescription', $locale);
 
-        return '' !== $description ? $description : (SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
+        return '' !== $description ? $description : ($this->seoConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
     }
 
     public function getSeoMicroData($id, string $type, array $params = []): string

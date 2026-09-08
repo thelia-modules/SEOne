@@ -12,7 +12,6 @@
 
 namespace SEOne\Service\SeoDefaultModels;
 
-use SEOne\SEOne;
 use SEOne\Service\SeoRequestMemo;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Thelia\Domain\Localization\Service\LangService;
@@ -57,12 +56,12 @@ readonly class DefaultSEO implements SeoElementInterface
 
     public function getSeoPageTitle($id): string
     {
-        return SEOne::getConfigValue('title', ConfigQuery::read('store_name'), $this->langService->getLocale()) ?? '';
+        return $this->seoConfigValue('title', ConfigQuery::read('store_name'), $this->langService->getLocale()) ?? '';
     }
 
     public function getSeoPageDesc($id): string
     {
-        return SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $this->langService->getLocale()) ?? '';
+        return $this->seoConfigValue('description', ConfigQuery::read('store_description'), $this->langService->getLocale()) ?? '';
     }
 
     public function getSeoPageH1($id, string $type): string

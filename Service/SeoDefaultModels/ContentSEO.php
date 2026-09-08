@@ -12,7 +12,6 @@
 
 namespace SEOne\Service\SeoDefaultModels;
 
-use SEOne\SEOne;
 use SEOne\Service\SeoRequestMemo;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Thelia\Domain\Localization\Service\LangService;
@@ -72,7 +71,7 @@ readonly class ContentSEO implements SeoElementInterface
         $content = ContentQuery::create()->findPk($id);
         $title = $this->firstLocalizedValue($content, ['getMetaTitle', 'getTitle'], $locale);
 
-        return '' !== $title ? $title : (SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
+        return '' !== $title ? $title : ($this->seoConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
     }
 
     public function getSeoPageDesc($id): string
@@ -81,7 +80,7 @@ readonly class ContentSEO implements SeoElementInterface
         $content = ContentQuery::create()->findPk($id);
         $description = $this->localizedValue($content, 'getMetaDescription', $locale);
 
-        return '' !== $description ? $description : (SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
+        return '' !== $description ? $description : ($this->seoConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
     }
 
     public function getSeoPageH1($id, string $type): string

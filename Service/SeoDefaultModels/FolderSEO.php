@@ -12,7 +12,6 @@
 
 namespace SEOne\Service\SeoDefaultModels;
 
-use SEOne\SEOne;
 use SEOne\Service\SeoRequestMemo;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Thelia\Domain\Localization\Service\LangService;
@@ -75,7 +74,7 @@ readonly class FolderSEO implements SeoElementInterface
         $folder = FolderQuery::create()->findPk($id);
         $title = $this->firstLocalizedValue($folder, ['getMetaTitle', 'getTitle'], $locale);
 
-        return '' !== $title ? $title : (SEOne::getConfigValue('title', ConfigQuery::read('store_name'), $locale) ?? '');
+        return '' !== $title ? $title : ($this->seoConfigValue('title', ConfigQuery::read('store_name'), $locale) ?? '');
     }
 
     public function getSeoPageDesc($id): string
@@ -84,7 +83,7 @@ readonly class FolderSEO implements SeoElementInterface
         $folder = FolderQuery::create()->findPk($id);
         $description = $this->localizedValue($folder, 'getMetaDescription', $locale);
 
-        return '' !== $description ? $description : (SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
+        return '' !== $description ? $description : ($this->seoConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
     }
 
     public function getSeoPageH1($id, string $type): string
