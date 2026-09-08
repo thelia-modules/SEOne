@@ -14,7 +14,6 @@ declare(strict_types=1);
 
 namespace SEOne\Service;
 
-use SEOne\SEOne;
 use Thelia\Domain\Localization\Service\LangService;
 use Thelia\Model\ConfigQuery;
 use Thelia\Model\CountryQuery;
@@ -36,6 +35,7 @@ final readonly class LocalBusinessFactory
 {
     public function __construct(
         private LangService $langService,
+        private SeoRequestMemo $seoRequestMemo,
     ) {
     }
 
@@ -45,15 +45,15 @@ final readonly class LocalBusinessFactory
     public function build(?string $locale = null, ?string $image = null): array
     {
         $locale ??= $this->langService->getLocale();
-        $image ??= SEOne::getConfigValue('store_image');
+        $image ??= $this->seoRequestMemo->getConfigValue('store_image');
         $siteUrl = rtrim((string) ConfigQuery::read('url_site'), '/');
-        $country = CountryQuery::create()->filterById((int) ConfigQuery::read('store_country', 64))->findOne();
+        $country = CountryQuery::create()->findPk((int) ConfigQuery::read('store_country', 64));
 
         $business = [
             '@type' => 'LocalBusiness',
             '@id' => $siteUrl.'/#business',
             'name' => ConfigQuery::read('store_name'),
-            'description' => SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $locale),
+            'description' => $this->seoRequestMemo->getConfigValue('description', ConfigQuery::read('store_description'), $locale),
             'url' => $siteUrl.'/',
             'address' => [
                 '@type' => 'PostalAddress',

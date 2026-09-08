@@ -12,9 +12,7 @@
 
 namespace SEOne\Service\SeoDefaultModels;
 
-use SEOne\Model\Map\SeoneI18nTableMap;
-use SEOne\Model\SeoneQuery;
-use SEOne\SEOne;
+use SEOne\Service\SeoRequestMemo;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Thelia\Domain\Localization\Service\LangService;
 use Thelia\Model\ConfigQuery;
@@ -31,9 +29,10 @@ readonly class ContentSEO implements SeoElementInterface
     public function __construct(
         LangService $langService,
         EventDispatcherInterface $eventDispatcher,
+        SeoRequestMemo $seoRequestMemo,
         private FolderSEO $folderSeo,
     ) {
-        $this->setDependencies(langService: $langService, dispatcher: $eventDispatcher);
+        $this->setDependencies(langService: $langService, dispatcher: $eventDispatcher, seoRequestMemo: $seoRequestMemo);
     }
 
     public function supports(string $view): bool
@@ -69,39 +68,32 @@ readonly class ContentSEO implements SeoElementInterface
     public function getSeoPageTitle($id): string
     {
         $locale = $this->langService->getLocale();
-        $content = ContentQuery::create()->filterById($id)->findOne();
+        $content = ContentQuery::create()->findPk($id);
         $title = $this->firstLocalizedValue($content, ['getMetaTitle', 'getTitle'], $locale);
 
-        return '' !== $title ? $title : (SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
+        return '' !== $title ? $title : ($this->seoConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
     }
 
     public function getSeoPageDesc($id): string
     {
         $locale = $this->langService->getLocale();
-        $content = ContentQuery::create()->filterById($id)->findOne();
+        $content = ContentQuery::create()->findPk($id);
         $description = $this->localizedValue($content, 'getMetaDescription', $locale);
 
-        return '' !== $description ? $description : (SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
+        return '' !== $description ? $description : ($this->seoConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
     }
 
     public function getSeoPageH1($id, string $type): string
     {
         $locale = $this->langService->getLocale();
-        $query = SeoneQuery::create()
-            ->filterByObjectId($id)
-            ->filterByObjectType($type)
-            ->useSEOneI18nQuery()
-            ->filterByLocale($locale)
-            ->endUse()
-            ->withColumn(SeoneI18nTableMap::COL_H1, 'h1')
-            ->findOne();
+        $query = $this->seoRow($type, $id, $locale);
 
         if (null !== $query && $query->getVirtualColumn('h1')) {
             return $query->getVirtualColumn('h1');
         }
         // Plain lookup, not useI18nQuery(): an inner join on the requested locale would
         // hide the content entirely instead of letting the default language answer.
-        $content = ContentQuery::create()->filterById($id)->findOne();
+        $content = ContentQuery::create()->findPk($id);
         $title = $this->localizedValue($content, 'getTitle', $locale);
 
         return '' !== $title ? $title : (ConfigQuery::read('store_name') ?? '');
@@ -109,7 +101,7 @@ readonly class ContentSEO implements SeoElementInterface
 
     private function getContentMicroData($contentId, Lang $lang): ?array
     {
-        $content = ContentQuery::create()->filterById($contentId)->findOne();
+        $content = ContentQuery::create()->findPk($contentId);
 
         if (null === $content) {
             return null;
@@ -129,7 +121,7 @@ readonly class ContentSEO implements SeoElementInterface
         $defaultFoIdlder = $content->getDefaultFolderId();
 
         if (null !== $defaultFoIdlder) {
-            $default_folder = FolderQuery::create()->findOneById($defaultFoIdlder);
+            $default_folder = FolderQuery::create()->findPk($defaultFoIdlder);
             if (null !== $default_folder) {
                 $default_folder->setLocale($locale);
                 $microData['isPartOf'] = [

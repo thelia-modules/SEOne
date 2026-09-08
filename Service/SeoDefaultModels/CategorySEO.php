@@ -14,9 +14,8 @@ namespace SEOne\Service\SeoDefaultModels;
 
 use Propel\Runtime\Collection\ObjectCollection;
 use Propel\Runtime\Util\PropelModelPager;
-use SEOne\Model\Map\SeoneI18nTableMap;
-use SEOne\Model\SeoneQuery;
 use SEOne\SEOne;
+use SEOne\Service\SeoRequestMemo;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Thelia\Domain\Localization\Service\LangService;
@@ -35,9 +34,10 @@ readonly class CategorySEO implements SeoElementInterface
     public function __construct(
         LangService $langService,
         EventDispatcherInterface $eventDispatcher,
+        SeoRequestMemo $seoRequestMemo,
         private RequestStack $requestStack
     ) {
-        $this->setDependencies(langService: $langService, dispatcher: $eventDispatcher);
+        $this->setDependencies(langService: $langService, dispatcher: $eventDispatcher, seoRequestMemo: $seoRequestMemo);
     }
 
     public function supports(string $view): bool
@@ -66,9 +66,9 @@ readonly class CategorySEO implements SeoElementInterface
         if ($id) {
             $request = $this->requestStack->getCurrentRequest();
             $page = $params['page'] ?? $request?->get('page') ?? 1;
-            $limit = $params['limit'] ?? $request?->get('limit') ?? SEOne::getConfigValue(SEOne::BETTER_SE0_LIMIT_CONFIG_KEY);
+            $limit = $params['limit'] ?? $request?->get('limit') ?? $this->seoConfigValue(SEOne::BETTER_SE0_LIMIT_CONFIG_KEY);
 
-            $category = CategoryQuery::create()->filterById($id)->findOne();
+            $category = CategoryQuery::create()->findPk($id);
 
             if (null !== $category) {
                 $microdata = $this->getCategoryMicroData($category, $this->langService->getLang(), $page, $limit);
@@ -92,37 +92,30 @@ readonly class CategorySEO implements SeoElementInterface
     public function getSeoPageTitle($id): string
     {
         $locale = $this->langService->getLocale();
-        $category = CategoryQuery::create()->filterById($id)->findOne();
+        $category = CategoryQuery::create()->findPk($id);
         $title = $this->firstLocalizedValue($category, ['getMetaTitle', 'getTitle'], $locale);
 
-        return '' !== $title ? $title : (SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
+        return '' !== $title ? $title : ($this->seoConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
     }
 
     public function getSeoPageDesc($id): string
     {
         $locale = $this->langService->getLocale();
-        $category = CategoryQuery::create()->filterById($id)->findOne();
+        $category = CategoryQuery::create()->findPk($id);
         $description = $this->localizedValue($category, 'getMetaDescription', $locale);
 
-        return '' !== $description ? $description : (SEOne::getConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
+        return '' !== $description ? $description : ($this->seoConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
     }
 
     public function getSeoPageH1($id, string $type): string
     {
         $locale = $this->langService->getLocale();
-        $query = SeoneQuery::create()
-            ->filterByObjectId($id)
-            ->filterByObjectType($type)
-            ->useSEOneI18nQuery()
-            ->filterByLocale($locale)
-            ->endUse()
-            ->withColumn(SeoneI18nTableMap::COL_H1, 'h1')
-            ->findOne();
+        $query = $this->seoRow($type, $id, $locale);
 
         if (null !== $query && $query->getVirtualColumn('h1')) {
             return $query->getVirtualColumn('h1');
         }
-        $category = CategoryQuery::create()->filterById($id)->findOne();
+        $category = CategoryQuery::create()->findPk($id);
         $title = $this->localizedValue($category, 'getTitle', $locale);
 
         return '' !== $title ? $title : (ConfigQuery::read('store_name') ?? '');
@@ -182,7 +175,7 @@ readonly class CategorySEO implements SeoElementInterface
     public function getCategoryPath(int $categoryId, ?array $path = []): array
     {
         $locale = $this->langService->getLocale();
-        $category = CategoryQuery::create()->filterById($categoryId)->findOne();
+        $category = CategoryQuery::create()->findPk($categoryId);
 
         if (null === $category) {
             return $path;
