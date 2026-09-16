@@ -99,6 +99,7 @@ class SeoForm extends BaseForm
                     UrlType::class,
                     [
                         'required' => false,
+                        'default_protocol' => 'https',
                         'label' => Translator::getInstance()->trans(
                             'url',
                             [],

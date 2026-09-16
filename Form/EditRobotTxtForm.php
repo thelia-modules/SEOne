@@ -31,9 +31,7 @@ class EditRobotTxtForm extends BaseForm
             IntegerType::class,
             [
                 'constraints' => [
-                    new NotBlank([
-                        'message' => Translator::getInstance()->trans('Robot id is required'),
-                    ]),
+                    new NotBlank(message: Translator::getInstance()->trans('Robot id is required')),
                 ],
             ]
         );
@@ -56,9 +54,7 @@ class EditRobotTxtForm extends BaseForm
             TextType::class,
             [
                 'constraints' => [
-                    new NotBlank([
-                        'message' => Translator::getInstance()->trans('Robot content is required'),
-                    ]),
+                    new NotBlank(message: Translator::getInstance()->trans('Robot content is required')),
                 ],
                 'label' => Translator::getInstance()->trans(
                     'Domain Name',
