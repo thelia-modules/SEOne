@@ -101,7 +101,7 @@ readonly class SeoToolsService
     public function getPageId(string $view): ?string
     {
         $key = $view . '_id';
-        $type = $this->getRequest()->get($key);
+        $type = $this->readRequestParameter($key);
         if ($type) {
             return $type;
         }
@@ -111,12 +111,25 @@ readonly class SeoToolsService
             return null;
         }
 
-        return $this->getRequest()->get($seoService?->getIdentifier()) ?? null;
+        return $this->readRequestParameter($seoService->getIdentifier());
     }
 
     public function getPageView(): ?string
     {
-        return $this->getRequest()->get('_view');
+        return $this->readRequestParameter('_view');
+    }
+
+    /**
+     * Reads a parameter from the routing attributes first, then the query string, then the body,
+     * which is the order Request::get() used before it was deprecated.
+     */
+    private function readRequestParameter(string $key): mixed
+    {
+        $request = $this->getRequest();
+
+        return $request->attributes->get($key)
+            ?? $request->query->get($key)
+            ?? $request->request->get($key);
     }
 
     public function getPageCanonical(): string

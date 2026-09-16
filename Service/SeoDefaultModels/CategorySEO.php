@@ -65,8 +65,8 @@ readonly class CategorySEO implements SeoElementInterface
         $microdata = null;
         if ($id) {
             $request = $this->requestStack->getCurrentRequest();
-            $page = $params['page'] ?? $request?->get('page') ?? 1;
-            $limit = $params['limit'] ?? $request?->get('limit') ?? $this->seoConfigValue(SEOne::BETTER_SE0_LIMIT_CONFIG_KEY);
+            $page = $params['page'] ?? $request?->query->get('page') ?? 1;
+            $limit = $params['limit'] ?? $request?->query->get('limit') ?? $this->seoConfigValue(SEOne::BETTER_SE0_LIMIT_CONFIG_KEY);
 
             $category = CategoryQuery::create()->findPk($id);
 
