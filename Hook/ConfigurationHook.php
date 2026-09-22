@@ -4,10 +4,12 @@ namespace SEOne\Hook;
 
 use SEOne\Form\CategoryLimitForm;
 use SEOne\Form\EditRobotTxtForm;
+use SEOne\Form\MetaTemplateForm;
 use SEOne\Form\StoreSeoForm;
 use SEOne\Model\Robots;
 use SEOne\Model\RobotsQuery;
 use SEOne\SEOne;
+use SEOne\Service\MetaTemplate\MetaTemplateService;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Thelia\Core\Event\Hook\HookRenderEvent;
 use Thelia\Core\Form\TheliaFormFactory;
@@ -23,6 +25,7 @@ class ConfigurationHook extends BaseHook
 
     public function __construct(
         private readonly TheliaFormFactory $formFactory,
+        private readonly MetaTemplateService $metaTemplateService,
         ?EventDispatcherInterface $dispatcher = null,
         ?ParserResolver $parserResolver = null,
     ) {
@@ -50,13 +53,55 @@ class ConfigurationHook extends BaseHook
             $robotForms[] = $robotForm->getView();
         }
 
+        $metaTemplateForm = $this->formFactory->createForm(MetaTemplateForm::getName());
+        $metaTemplateForm->createView();
+
         $event->add(
             $this->render('SEOne/module_configuration.html.twig', [
                 'store_form' => $storeForm->getView(),
                 'category_form' => $categoryForm->getView(),
                 'robot_forms' => $robotForms,
+                'meta_template_form' => $metaTemplateForm->getView(),
+                'meta_template_views' => $this->getMetaTemplateViews(),
+                'meta_template_edit_language_id' => $this->getMetaTemplateEditLanguageId(),
             ])
         );
+    }
+
+    /**
+     * One entry per view served by a resolver, in declaration order, each carrying the
+     * variables its templates may use.
+     *
+     * @return list<array{view: string, variables: list<string>}>
+     */
+    protected function getMetaTemplateViews(): array
+    {
+        $views = [];
+
+        foreach (array_keys($this->metaTemplateService->getResolvers()) as $view) {
+            $views[] = [
+                'view' => $view,
+                'variables' => $this->metaTemplateService->getVariableNames($view),
+            ];
+        }
+
+        return $views;
+    }
+
+    /**
+     * The language the templates are shown and saved in: the one the switcher asked for, then
+     * the administrator's own, which is what the controller resolves on save.
+     */
+    protected function getMetaTemplateEditLanguageId(): int
+    {
+        $request = $this->getRequest();
+        $requestedLanguageId = $request?->query->get('edit_language_id') ?? $request?->request->get('edit_language_id');
+
+        if (null !== $requestedLanguageId && null !== LangQuery::create()->findOneById($requestedLanguageId)) {
+            return (int) $requestedLanguageId;
+        }
+
+        return (int) $this->getSession()->getAdminLang()->getId();
     }
 
     public static function getSubscribedHooks(): array

@@ -11,6 +11,7 @@
         <hook id="seone.addfields.hook" class="SEOne\Hook\SeoFormHook">
             <tag name="hook.event_listener" event="tab-seo.bottom" type="back" method="onTabSeoUpdateForm" />
             <argument type="service" id="Thelia\Core\Form\TheliaFormFactory" />
+            <argument type="service" id="SEOne\Service\MetaTemplate\MetaTemplateService" />
         </hook>
         <hook id="seone.meta.hook" class="SEOne\Hook\MetaHook" scope="request">
             <tag name="hook.event_listener" event="main.head-bottom" type="front" method="onMainHeadBottom" />
