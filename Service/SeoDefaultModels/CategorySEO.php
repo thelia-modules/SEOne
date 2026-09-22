@@ -15,6 +15,8 @@ namespace SEOne\Service\SeoDefaultModels;
 use Propel\Runtime\Collection\ObjectCollection;
 use Propel\Runtime\Util\PropelModelPager;
 use SEOne\SEOne;
+use SEOne\Service\MetaTemplate\MetaTemplateField;
+use SEOne\Service\MetaTemplate\MetaTemplateService;
 use SEOne\Service\SeoRequestMemo;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
@@ -35,7 +37,8 @@ readonly class CategorySEO implements SeoElementInterface
         LangService $langService,
         EventDispatcherInterface $eventDispatcher,
         SeoRequestMemo $seoRequestMemo,
-        private RequestStack $requestStack
+        private RequestStack $requestStack,
+        private MetaTemplateService $metaTemplates,
     ) {
         $this->setDependencies(langService: $langService, dispatcher: $eventDispatcher, seoRequestMemo: $seoRequestMemo);
     }
@@ -93,9 +96,18 @@ readonly class CategorySEO implements SeoElementInterface
     {
         $locale = $this->langService->getLocale();
         $category = CategoryQuery::create()->findPk($id);
-        $title = $this->firstLocalizedValue($category, ['getMetaTitle', 'getTitle'], $locale);
+        $title = $this->localizedValue($category, 'getMetaTitle', $locale);
 
-        return '' !== $title ? $title : ($this->seoConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
+        if ('' === $title) {
+            $title = $this->metaTemplates->render($this->getView(), MetaTemplateField::Title, (int) $id, $locale);
+        }
+
+        if ('' === $title) {
+            $title = $this->localizedValue($category, 'getTitle', $locale);
+        }
+
+        // The page title falls back on the store name, never on the store description.
+        return '' !== $title ? $title : ($this->seoConfigValue('title', ConfigQuery::read('store_name'), $locale) ?? '');
     }
 
     public function getSeoPageDesc($id): string
@@ -103,6 +115,10 @@ readonly class CategorySEO implements SeoElementInterface
         $locale = $this->langService->getLocale();
         $category = CategoryQuery::create()->findPk($id);
         $description = $this->localizedValue($category, 'getMetaDescription', $locale);
+
+        if ('' === $description) {
+            $description = $this->metaTemplates->render($this->getView(), MetaTemplateField::Description, (int) $id, $locale);
+        }
 
         return '' !== $description ? $description : ($this->seoConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
     }
