@@ -13,6 +13,7 @@
 namespace SEOne;
 
 use Propel\Runtime\Connection\ConnectionInterface;
+use SEOne\Service\InstallSql;
 use SEOne\Service\RobotTxtService;
 use Symfony\Component\DependencyInjection\Loader\Configurator\ServicesConfigurator;
 use Thelia\Core\Install\Database;
@@ -28,7 +29,19 @@ class SEOne extends BaseModule
     {
         if (!self::getConfigValue('is_initialized')) {
             $database = new Database($con);
-            $database->insertSql(null, [__DIR__.'/Config/TheliaMain.sql']);
+            $installScript = tempnam(sys_get_temp_dir(), 'seone');
+
+            if (false === $installScript) {
+                throw new \RuntimeException('Unable to write the SEOne install script to the temporary directory');
+            }
+
+            file_put_contents($installScript, InstallSql::keepingExistingTables((string) file_get_contents(__DIR__.'/Config/TheliaMain.sql')));
+
+            try {
+                $database->insertSql(null, [$installScript]);
+            } finally {
+                unlink($installScript);
+            }
             self::setConfigValue('is_initialized', 1);
         }
 
