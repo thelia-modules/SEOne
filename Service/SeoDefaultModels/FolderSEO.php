@@ -12,6 +12,8 @@
 
 namespace SEOne\Service\SeoDefaultModels;
 
+use SEOne\Service\MetaTemplate\MetaTemplateField;
+use SEOne\Service\MetaTemplate\MetaTemplateService;
 use SEOne\Service\SeoRequestMemo;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Thelia\Domain\Localization\Service\LangService;
@@ -29,6 +31,7 @@ readonly class FolderSEO implements SeoElementInterface
         LangService $langService,
         EventDispatcherInterface $eventDispatcher,
         SeoRequestMemo $seoRequestMemo,
+        private MetaTemplateService $metaTemplates,
     ) {
         $this->setDependencies(langService: $langService, dispatcher: $eventDispatcher, seoRequestMemo: $seoRequestMemo);
     }
@@ -72,7 +75,15 @@ readonly class FolderSEO implements SeoElementInterface
     {
         $locale = $this->langService->getLocale();
         $folder = FolderQuery::create()->findPk($id);
-        $title = $this->firstLocalizedValue($folder, ['getMetaTitle', 'getTitle'], $locale);
+        $title = $this->localizedValue($folder, 'getMetaTitle', $locale);
+
+        if ('' === $title) {
+            $title = $this->metaTemplates->render($this->getView(), MetaTemplateField::Title, (int) $id, $locale);
+        }
+
+        if ('' === $title) {
+            $title = $this->localizedValue($folder, 'getTitle', $locale);
+        }
 
         return '' !== $title ? $title : ($this->seoConfigValue('title', ConfigQuery::read('store_name'), $locale) ?? '');
     }
@@ -82,6 +93,10 @@ readonly class FolderSEO implements SeoElementInterface
         $locale = $this->langService->getLocale();
         $folder = FolderQuery::create()->findPk($id);
         $description = $this->localizedValue($folder, 'getMetaDescription', $locale);
+
+        if ('' === $description) {
+            $description = $this->metaTemplates->render($this->getView(), MetaTemplateField::Description, (int) $id, $locale);
+        }
 
         return '' !== $description ? $description : ($this->seoConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
     }

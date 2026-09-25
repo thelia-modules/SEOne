@@ -5,6 +5,8 @@ namespace SEOne\Hook;
 use SEOne\Form\SeoForm;
 use SEOne\Model\SeoneQuery;
 use SEOne\SEOne;
+use SEOne\Service\MetaTemplate\MetaTemplateField;
+use SEOne\Service\MetaTemplate\MetaTemplateService;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Thelia\Core\Event\Hook\HookRenderEvent;
 use Thelia\Core\Form\TheliaFormFactory;
@@ -18,6 +20,7 @@ class SeoFormHook extends BaseHook
 
     public function __construct(
         private readonly TheliaFormFactory $formFactory,
+        private readonly MetaTemplateService $metaTemplateService,
         ?EventDispatcherInterface $dispatcher = null,
         ?ParserResolver $parserResolver = null,
     ) {
@@ -45,9 +48,28 @@ class SeoFormHook extends BaseHook
                     'edit_language_id' => $lang->getId(),
                     'values' => $this->loadValues($objectId, $objectType, $lang->getLocale()),
                     'canonical' => $this->loadCanonical($objectId, $objectType, $lang->getLocale()),
+                    'meta_template_hint' => $this->loadMetaTemplateHint($objectId, $objectType, $lang->getLocale()),
                 ]
             )
         );
+    }
+
+    /**
+     * What the configured templates would produce for this entity, so the merchant sees what
+     * an empty meta field falls back to. Empty when no resolver serves this kind of page.
+     *
+     * @return array<string, string>
+     */
+    private function loadMetaTemplateHint(int $objectId, string $objectType, string $locale): array
+    {
+        if (null === $this->metaTemplateService->getResolver($objectType)) {
+            return [];
+        }
+
+        return [
+            'title' => $this->metaTemplateService->render($objectType, MetaTemplateField::Title, $objectId, $locale),
+            'description' => $this->metaTemplateService->render($objectType, MetaTemplateField::Description, $objectId, $locale),
+        ];
     }
 
     /**

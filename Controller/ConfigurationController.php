@@ -16,9 +16,12 @@ namespace SEOne\Controller;
 
 use SEOne\Form\CategoryLimitForm;
 use SEOne\Form\EditRobotTxtForm;
+use SEOne\Form\MetaTemplateForm;
 use SEOne\Form\StoreSeoForm;
-use SEOne\Model\RobotsQuery;
 use SEOne\SEOne;
+use SEOne\Service\MetaTemplate\MetaTemplateField;
+use SEOne\Service\MetaTemplate\MetaTemplateRepository;
+use SEOne\Service\MetaTemplate\MetaTemplateService;
 use SEOne\Service\RobotTxtService;
 use Symfony\Component\HttpFoundation\RedirectResponse;
 use Symfony\Component\HttpFoundation\Response;
@@ -101,6 +104,63 @@ class ConfigurationController extends AdminController
         }
 
         return $this->generateErrorRedirect($baseForm);
+    }
+
+    #[Route('/configuration/meta-templates', name: 'meta_templates_configuration', methods: 'POST')]
+    public function saveMetaTemplates(
+        ParserContext $parserContext,
+        MetaTemplateService $metaTemplateService,
+        MetaTemplateRepository $metaTemplateRepository,
+    ): RedirectResponse|Response|null {
+        if (null !== $response = $this->checkAuth([AdminResources::MODULE], ['Seone'], AccessManager::UPDATE)) {
+            return $response;
+        }
+
+        $baseForm = $this->createForm(MetaTemplateForm::getName());
+
+        $errorMessage = null;
+
+        $locale = $this->getCurrentEditionLocale();
+
+        try {
+            $data = $this->validateForm($baseForm)->getData();
+
+            foreach (array_keys($metaTemplateService->getResolvers()) as $view) {
+                foreach (MetaTemplateField::cases() as $field) {
+                    $metaTemplateRepository->saveTemplate(
+                        $view,
+                        $field,
+                        $locale,
+                        (string) $data[MetaTemplateForm::templateFieldName($view, $field)],
+                    );
+                }
+            }
+
+            foreach (MetaTemplateField::cases() as $field) {
+                $maxLength = $data[MetaTemplateForm::maxLengthFieldName($field)];
+                $metaTemplateRepository->saveMaxLength($field, null === $maxLength ? null : (int) $maxLength);
+            }
+        } catch (FormValidationException $ex) {
+            $errorMessage = $this->createStandardFormValidationErrorMessage($ex);
+        } catch (\Exception $ex) {
+            $errorMessage = $this->getTranslator()->trans('Sorry, an error occurred: %err', ['%err' => $ex->getMessage()], SEOne::DOMAIN_NAME, $locale);
+        }
+
+        if (null !== $errorMessage) {
+            $baseForm->setErrorMessage($errorMessage);
+
+            $parserContext
+                ->addForm($baseForm)
+                ->setGeneralError($errorMessage);
+
+            $this->addFlash('danger', $errorMessage);
+
+            return $this->generateErrorRedirect($baseForm);
+        }
+
+        $this->addFlash('success', $this->getTranslator()->trans('Configuration correctly saved', [], SEOne::DOMAIN_NAME, $locale));
+
+        return $this->generateSuccessRedirect($baseForm);
     }
 
     #[Route('/edit-robottxt', name: 'edit_robottxt', methods: 'POST')]

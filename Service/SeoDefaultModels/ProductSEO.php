@@ -12,12 +12,15 @@
 
 namespace SEOne\Service\SeoDefaultModels;
 
+use SEOne\Service\MetaTemplate\MetaTemplateField;
+use SEOne\Service\MetaTemplate\MetaTemplateService;
 use SEOne\Service\SeoRequestMemo;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Thelia\Core\Event\Image\ImageEvent;
 use Thelia\Core\Event\TheliaEvents;
 use Thelia\Domain\Localization\Service\LangService;
+use Thelia\Domain\Taxation\TaxEngine\Exception\TaxEngineException;
 use Thelia\Domain\Taxation\TaxEngine\TaxEngine;
 use Thelia\Model\Base\ProductCategoryQuery;
 use Thelia\Model\BrandI18nQuery;
@@ -42,6 +45,7 @@ readonly class ProductSEO implements SeoElementInterface
         private RequestStack $requestStack,
         private TaxEngine $taxEngine,
         private CategorySEO $categorySEO,
+        private MetaTemplateService $metaTemplates,
     ) {
         $this->setDependencies(langService: $langService, dispatcher: $eventDispatcher, seoRequestMemo: $seoRequestMemo);
     }
@@ -84,7 +88,15 @@ readonly class ProductSEO implements SeoElementInterface
     {
         $locale = $this->langService->getLocale();
         $product = ProductQuery::create()->findPk($id);
-        $title = $this->firstLocalizedValue($product, ['getMetaTitle', 'getTitle'], $locale);
+        $title = $this->localizedValue($product, 'getMetaTitle', $locale);
+
+        if ('' === $title) {
+            $title = $this->metaTemplates->render($this->getView(), MetaTemplateField::Title, (int) $id, $locale);
+        }
+
+        if ('' === $title) {
+            $title = $this->localizedValue($product, 'getTitle', $locale);
+        }
 
         return '' !== $title ? $title : ($this->seoConfigValue('title', ConfigQuery::read('store_name'), $locale) ?? '');
     }
@@ -94,6 +106,10 @@ readonly class ProductSEO implements SeoElementInterface
         $locale = $this->langService->getLocale();
         $product = ProductQuery::create()->findPk($id);
         $description = $this->localizedValue($product, 'getMetaDescription', $locale);
+
+        if ('' === $description) {
+            $description = $this->metaTemplates->render($this->getView(), MetaTemplateField::Description, (int) $id, $locale);
+        }
 
         return '' !== $description ? $description : ($this->seoConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
     }
@@ -142,7 +158,7 @@ readonly class ProductSEO implements SeoElementInterface
                     $psePrice->getPromoPrice()
                 );
             }
-        } catch (TaxEngineException $e) {
+        } catch (TaxEngineException) {
             $taxedPrice = null;
         }
 

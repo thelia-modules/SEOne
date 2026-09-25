@@ -3,6 +3,18 @@
    carries the form. One form, one save: canonical override + robots + H1 + JSON-LD + mesh. #}
 {% set d = 'seone' %}
 {% set values = values|default({}) %}
+{% set meta_template_hint = meta_template_hint|default({}) %}
+
+{% if meta_template_hint.title|default('') is not empty or meta_template_hint.description|default('') is not empty %}
+    <div class="alert alert-light border small mb-3">
+        {% if meta_template_hint.title|default('') is not empty %}
+            <div>{{ 'meta_template.hint.title'|trans({'%value%': meta_template_hint.title}, d) }}</div>
+        {% endif %}
+        {% if meta_template_hint.description|default('') is not empty %}
+            <div>{{ 'meta_template.hint.description'|trans({'%value%': meta_template_hint.description}, d) }}</div>
+        {% endif %}
+    </div>
+{% endif %}
 
 <form method="post" action="{{ path('seone_seo_save', { object_id: object_id, object_type: object_type, lang_id: edit_language_id }) }}">
     {{ form_widget(form._token) }}

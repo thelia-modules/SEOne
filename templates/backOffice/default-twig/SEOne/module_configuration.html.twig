@@ -34,6 +34,89 @@
     </div>
 </div>
 
+{# ============ Meta tag templates ============ #}
+<div class="card mb-4" id="seone-meta-templates">
+    <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <h5 class="card-title mb-0">{{ 'meta_template.card.title'|trans({}, 'seone') }}</h5>
+        {{ component('BoLanguageSwitcher', { currentLanguageId: meta_template_edit_language_id }) }}
+    </div>
+    <div class="card-body">
+        {% set meta_template_return_url = path('admin.module.configure', {module_code: 'SEOne', edit_language_id: meta_template_edit_language_id}) ~ '#seone-meta-templates' %}
+        {{ form_start(meta_template_form, {action: path('seone_config_meta_templates_configuration'), method: 'POST'}) }}
+            <input type="hidden" name="edit_language_id" value="{{ meta_template_edit_language_id }}">
+            <input type="hidden" name="{{ meta_template_form.vars.full_name }}[success_url]" value="{{ meta_template_return_url }}">
+            <input type="hidden" name="{{ meta_template_form.vars.full_name }}[error_url]" value="{{ meta_template_return_url }}">
+            {% do meta_template_form.success_url.setRendered %}
+            {% do meta_template_form.error_url.setRendered %}
+
+            {{ form_errors(meta_template_form) }}
+
+            <p class="text-muted small">{{ 'meta_template.help'|trans({}, 'seone') }}</p>
+
+            <div class="row">
+                <div class="col-md-3 mb-3">
+                    {{ form_label(meta_template_form.max_length_title) }}
+                    {{ form_widget(meta_template_form.max_length_title, {attr: {class: 'form-control'}}) }}
+                </div>
+                <div class="col-md-3 mb-3">
+                    {{ form_label(meta_template_form.max_length_description) }}
+                    {{ form_widget(meta_template_form.max_length_description, {attr: {class: 'form-control'}}) }}
+                </div>
+            </div>
+
+            {% if meta_template_views is empty %}
+                <p class="text-muted mb-3">{{ 'meta_template.empty'|trans({}, 'seone') }}</p>
+            {% else %}
+                <div class="accordion mb-3" id="seone-meta-templates-accordion">
+                    {% for entry in meta_template_views %}
+                        <div class="accordion-item">
+                            <h2 class="accordion-header" id="seone-meta-heading-{{ entry.view }}">
+                                <button class="accordion-button collapsed" type="button"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target="#seone-meta-collapse-{{ entry.view }}"
+                                        aria-expanded="false"
+                                        aria-controls="seone-meta-collapse-{{ entry.view }}">
+                                    {{ ('meta_template.view.' ~ entry.view)|trans({}, 'seone') }}
+                                </button>
+                            </h2>
+                            <div id="seone-meta-collapse-{{ entry.view }}"
+                                 class="accordion-collapse collapse"
+                                 aria-labelledby="seone-meta-heading-{{ entry.view }}"
+                                 data-bs-parent="#seone-meta-templates-accordion">
+                                <div class="accordion-body">
+                                    {% for field_key in ['title', 'description'] %}
+                                        {% set field = attribute(meta_template_form, entry.view ~ '_' ~ field_key) %}
+                                        {% set max_length = attribute(meta_template_form, 'max_length_' ~ field_key).vars.value %}
+                                        <div class="mb-4">
+                                            {{ form_label(field) }}
+                                            {{ form_widget(field, {attr: {class: 'form-control'}}) }}
+                                            <small class="text-muted d-block mt-1"
+                                                   data-seone-counter-for="{{ field.vars.id }}"
+                                                   data-seone-counter-max="{{ max_length }}">{{ field.vars.value|default('')|length }} / {{ max_length }}</small>
+                                            <div class="mt-2">
+                                                <small class="text-muted d-block mb-1">{{ 'meta_template.variables'|trans({}, 'seone') }}</small>
+                                                {% for variable in entry.variables %}
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary me-1 mb-1"
+                                                            data-seone-variable="%{{ variable }}%"
+                                                            data-seone-target="{{ field.vars.id }}">{{ variable }}</button>
+                                                {% endfor %}
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            <button type="submit" class="btn btn-primary">
+                <i class="bi bi-save"></i> {{ 'Save'|trans({}, 'seone.bo.default') }}
+            </button>
+        {{ form_end(meta_template_form) }}
+    </div>
+</div>
+
 {# ============ Category configuration ============ #}
 <div class="card mb-4">
     <div class="card-header">
@@ -100,3 +183,54 @@
         </div>
     </div>
 </div>
+
+{# Variable buttons and length counters of the meta template card. No library, no build step. #}
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        var card = document.getElementById('seone-meta-templates');
+
+        if (!card) {
+            return;
+        }
+
+        card.querySelectorAll('[data-seone-variable]').forEach(function (button) {
+            button.addEventListener('click', function () {
+                var input = document.getElementById(button.dataset.seoneTarget);
+
+                if (!input) {
+                    return;
+                }
+
+                var value = input.value;
+                var start = null === input.selectionStart ? value.length : input.selectionStart;
+                var end = null === input.selectionEnd ? value.length : input.selectionEnd;
+                var before = value.slice(0, start);
+                var insertion = button.dataset.seoneVariable;
+
+                if (before.length > 0 && !/\s$/.test(before)) {
+                    insertion = ' ' + insertion;
+                }
+
+                input.value = before + insertion + value.slice(end);
+
+                var caret = before.length + insertion.length;
+
+                input.focus();
+                input.setSelectionRange(caret, caret);
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+            });
+        });
+
+        card.querySelectorAll('[data-seone-counter-for]').forEach(function (counter) {
+            var input = document.getElementById(counter.dataset.seoneCounterFor);
+
+            if (!input) {
+                return;
+            }
+
+            input.addEventListener('input', function () {
+                counter.textContent = input.value.length + ' / ' + counter.dataset.seoneCounterMax;
+            });
+        });
+    });
+</script>
