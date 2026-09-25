@@ -67,7 +67,12 @@ class RobotTxtService
         $domains = [];
 
         if (!$this->isUniqueDomain) {
-            $domains[] = URL::getInstance()->getBaseUrl();
+            $baseUrl = $this->currentBaseUrl();
+
+            if ('' !== $baseUrl) {
+                $domains[] = $baseUrl;
+            }
+
             return $domains;
         }
 
@@ -79,6 +84,20 @@ class RobotTxtService
             ->find();
 
         return $langs->getData();
+    }
+
+    /**
+     * The request base url when there is one. A command (the activation run by template:set or
+     * module:activate) has no request, and the URL service is not built: the configured shop url is
+     * the domain then, in the format of the language urls (no trailing slash).
+     */
+    private function currentBaseUrl(): string
+    {
+        try {
+            return URL::getInstance()->getBaseUrl();
+        } catch (\RuntimeException) {
+            return rtrim((string) ConfigQuery::getConfiguredShopUrl(), '/');
+        }
     }
 
     public function getCurrentRobotTxt(string $domainName): ?Robots
