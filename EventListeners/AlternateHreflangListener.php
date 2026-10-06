@@ -9,6 +9,8 @@ use Thelia\Tools\URL;
 
 class AlternateHreflangListener implements EventSubscriberInterface
 {
+    private const array CATALOGUE_VIEWS = ['brand', 'product', 'folder', 'content', 'category'];
+
     public static function getSubscribedEvents() : array
     {
         return [
@@ -24,36 +26,27 @@ class AlternateHreflangListener implements EventSubscriberInterface
 
         $multiDomainActivated = ConfigQuery::isMultiDomainActivated();
 
-        switch ($view) {
-            case 'brand':
-                $uri = $this->findUrlFromView($event, 'brand', 'brand_id');
-                break;
-            case 'product':
-                $uri = $this->findUrlFromView($event, 'product', 'product_id');
-                break;
-            case 'folder':
-                $uri = $this->findUrlFromView($event, 'folder', 'folder_id');
-                break;
-            case 'content':
-                $uri = $this->findUrlFromView($event, 'content', 'content_id');
-                break;
-            case 'category':
-                $uri = $this->findUrlFromView($event, 'category', 'category_id');
-                break;
-            default:
-                $uri = $event->getRequest()->getRequestUri();
-                if (!$multiDomainActivated) {
-                    $uri = $event->getRequest()->getRequestUri();
+        $uri = null;
 
-                    if (preg_match('/lang=[a-zA-Z_]{5}/', $uri)) {
-                        $uri = preg_replace('/lang=[a-zA-Z_]{5}/', 'lang=' . $event->getLang()->getLocale(), $uri);
-                    } elseif (\strpos($uri, '?')) {
-                        $uri .= '&lang=' . $event->getLang()->getLocale();
-                    } else {
-                        $uri .= '?lang=' . $event->getLang()->getLocale();
-                    }
+        // A catalogue page offers its own language versions only once the shop agreed to serve
+        // it: the not found page of a hidden one must not name it (see ServedViewListener).
+        if (\in_array($view, self::CATALOGUE_VIEWS, true)
+            && ServedViewListener::isServed($event->getRequest(), $view, $event->getRequest()->attributes->get($view.'_id'))
+        ) {
+            $uri = $this->findUrlFromView($event, $view, $view.'_id');
+        }
+
+        if (null === $uri) {
+            $uri = $event->getRequest()->getRequestUri();
+            if (!$multiDomainActivated) {
+                if (preg_match('/lang=[a-zA-Z_]{5}/', $uri)) {
+                    $uri = preg_replace('/lang=[a-zA-Z_]{5}/', 'lang=' . $event->getLang()->getLocale(), $uri);
+                } elseif (\strpos($uri, '?')) {
+                    $uri .= '&lang=' . $event->getLang()->getLocale();
+                } else {
+                    $uri .= '?lang=' . $event->getLang()->getLocale();
                 }
-                break;
+            }
         }
 
         if ($multiDomainActivated) {
