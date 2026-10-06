@@ -20,6 +20,7 @@ use Propel\Runtime\Propel;
 use SEOne\Model\RobotsQuery;
 use SEOne\Model\SeoneQuery;
 use SEOne\SEOne;
+use Symfony\Component\DomCrawler\Crawler;
 use Symfony\Component\DomCrawler\Form;
 use Symfony\Contracts\EventDispatcher\EventDispatcherInterface;
 use Thelia\Core\Security\AccessManager;
@@ -194,7 +195,11 @@ final class ConfigurationRightsTest extends WebIntegrationTestCase
         self::assertSame(200, $this->client->getResponse()->getStatusCode());
 
         $action = $this->getContainer()->get('router')->generate($route);
-        $form = $crawler->filter('form[action="'.$action.'"]')->first()->form();
+        $form = $crawler
+            ->filter('form')
+            ->reduce(static fn (Crawler $candidate): bool => parse_url($candidate->attr('action') ?? '', PHP_URL_PATH) === $action)
+            ->first()
+            ->form();
         $form->setValues($values);
 
         return $form;
