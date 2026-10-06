@@ -50,7 +50,7 @@ class AlternateHreflangListener implements EventSubscriberInterface
         }
 
         if ($multiDomainActivated) {
-            $baseUrl = $event->getLang()->getUrl();
+            $baseUrl = (string) $event->getLang()->getUrl();
 
             $uri = trim($uri, '/');
 
