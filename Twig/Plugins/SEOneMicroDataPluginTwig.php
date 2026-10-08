@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace SEOne\Twig\Plugins;
 
+use SEOne\Service\JsonLd;
 use SEOne\Service\SeoToolsService;
 use Thelia\Model\ConfigQuery;
 use Thelia\Tools\URL;
@@ -145,11 +146,11 @@ class SEOneMicroDataPluginTwig extends AbstractExtension
             return '';
         }
 
-        return '<script type="application/ld+json">'.json_encode([
+        return JsonLd::script([
             '@context' => 'https://schema.org/',
             '@type' => 'BreadcrumbList',
             'itemListElement' => $itemListElement,
-        ]).'</script>';
+        ]);
     }
 
     /**

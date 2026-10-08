@@ -14,6 +14,7 @@ declare(strict_types=1);
 
 namespace SEOne\Twig\Plugins;
 
+use SEOne\Service\JsonLd;
 use SEOne\Service\LocalBusinessFactory;
 use SEOne\Service\SeoToolsService;
 use Thelia\Domain\Localization\Service\LangService;
@@ -157,8 +158,6 @@ class SEOneStructuredDataPluginTwig extends AbstractExtension
      */
     private function script(array $node): string
     {
-        return '<script type="application/ld+json">'
-            .json_encode(['@context' => 'https://schema.org'] + $node, \JSON_UNESCAPED_UNICODE | \JSON_UNESCAPED_SLASHES)
-            .'</script>';
+        return JsonLd::script(['@context' => 'https://schema.org'] + $node);
     }
 }
