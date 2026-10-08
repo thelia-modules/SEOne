@@ -16,8 +16,8 @@ namespace SEOne\Twig\Plugins;
 
 use SEOne\Service\JsonLd;
 use SEOne\Service\SeoToolsService;
+use SEOne\Service\ShopUrl;
 use Thelia\Model\ConfigQuery;
-use Thelia\Tools\URL;
 use Twig\Extension\AbstractExtension;
 use Twig\TwigFunction;
 
@@ -25,6 +25,7 @@ class SEOneMicroDataPluginTwig extends AbstractExtension
 {
     public function __construct(
         private readonly SeoToolsService $toolsService,
+        private readonly ShopUrl $shopUrl,
     ) {
     }
 
@@ -158,16 +159,9 @@ class SEOneMicroDataPluginTwig extends AbstractExtension
      */
     private function getHomeItem(): array
     {
-        $url = ConfigQuery::read('url_site');
-
-        // url_site is often left empty in development: fall back to the URL the request
-        // came in on rather than emitting an empty @id.
-        if (null === $url || '' === $url) {
-            $url = URL::getInstance()->getIndexPage();
-        }
-
+        // The home of the language browsed: on a shop with one domain per language, its own domain.
         return [
-            'url' => $url,
+            'url' => $this->shopUrl->base(),
             'title' => ConfigQuery::read('store_name'),
         ];
     }

@@ -36,6 +36,7 @@ final readonly class LocalBusinessFactory
     public function __construct(
         private LangService $langService,
         private SeoRequestMemo $seoRequestMemo,
+        private ShopUrl $shopUrl,
     ) {
     }
 
@@ -46,7 +47,7 @@ final readonly class LocalBusinessFactory
     {
         $locale ??= $this->langService->getLocale();
         $image ??= $this->seoRequestMemo->getConfigValue('store_image');
-        $siteUrl = rtrim((string) ConfigQuery::read('url_site'), '/');
+        $siteUrl = $this->shopUrl->base($locale);
         $country = CountryQuery::create()->findPk((int) ConfigQuery::read('store_country', 64));
 
         $business = [

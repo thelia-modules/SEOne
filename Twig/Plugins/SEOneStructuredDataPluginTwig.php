@@ -17,6 +17,7 @@ namespace SEOne\Twig\Plugins;
 use SEOne\Service\JsonLd;
 use SEOne\Service\LocalBusinessFactory;
 use SEOne\Service\SeoToolsService;
+use SEOne\Service\ShopUrl;
 use Thelia\Domain\Localization\Service\LangService;
 use Thelia\Model\ConfigQuery;
 use Twig\Extension\AbstractExtension;
@@ -47,6 +48,7 @@ class SEOneStructuredDataPluginTwig extends AbstractExtension
         private readonly LocalBusinessFactory $localBusinessFactory,
         private readonly SeoToolsService $toolsService,
         private readonly LangService $langService,
+        private readonly ShopUrl $shopUrl,
     ) {
     }
 
@@ -145,7 +147,7 @@ class SEOneStructuredDataPluginTwig extends AbstractExtension
 
     private function siteUrl(): string
     {
-        return rtrim((string) ConfigQuery::read('url_site'), '/');
+        return $this->shopUrl->base();
     }
 
     private function language(): string
