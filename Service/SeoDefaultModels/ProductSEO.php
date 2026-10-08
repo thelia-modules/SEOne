@@ -14,21 +14,18 @@ namespace SEOne\Service\SeoDefaultModels;
 
 use SEOne\Service\MetaTemplate\MetaTemplateField;
 use SEOne\Service\MetaTemplate\MetaTemplateService;
+use SEOne\Service\ProductStructuredData;
 use SEOne\Service\SeoRequestMemo;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpFoundation\RequestStack;
-use Thelia\Core\Event\Image\ImageEvent;
-use Thelia\Core\Event\TheliaEvents;
 use Thelia\Domain\Localization\Service\LangService;
-use Thelia\Domain\Taxation\TaxEngine\Exception\TaxEngineException;
 use Thelia\Domain\Taxation\TaxEngine\TaxEngine;
 use Thelia\Model\Base\ProductCategoryQuery;
-use Thelia\Model\BrandI18nQuery;
 use Thelia\Model\ConfigQuery;
+use Thelia\Model\Currency;
 use Thelia\Model\Lang;
 use Thelia\Model\Product;
 use Thelia\Model\ProductImageQuery;
-use Thelia\Model\ProductPriceQuery;
 use Thelia\Model\ProductQuery;
 use Thelia\Model\ProductSaleElementsQuery;
 
@@ -46,6 +43,7 @@ readonly class ProductSEO implements SeoElementInterface
         private TaxEngine $taxEngine,
         private CategorySEO $categorySEO,
         private MetaTemplateService $metaTemplates,
+        private ProductStructuredData $structuredData,
     ) {
         $this->setDependencies(langService: $langService, dispatcher: $eventDispatcher, seoRequestMemo: $seoRequestMemo);
     }
@@ -114,19 +112,21 @@ readonly class ProductSEO implements SeoElementInterface
         return '' !== $description ? $description : ($this->seoConfigValue('description', ConfigQuery::read('store_description'), $locale) ?? '');
     }
 
+    /**
+     * The Product node of the page. Two parameters of the micro data event, which a listener of
+     * `better.seo.page.micro.data` can set before this model runs: `related_products` (isRelatedTo)
+     * and `similar_products` (isSimilarTo), product ids, an array or a comma separated list.
+     */
     public function getSeoMicroData($id, string $type, array $params = []): string
     {
         $objectId = $params['id'] ?? $id;
-        $product = ProductQuery::create()->findPk($objectId);
-        $relatedProducts = null;
+        $product = null === $objectId ? null : ProductQuery::create()->findPk($objectId);
 
-        if (null !== $params && \array_key_exists('related_products', $params)) {
-            $relatedProducts = \is_array($params['related_products']) ? $params['related_products'] : $this->explode($params['related_products']);
-        }
         $microdata = null === $product ? null : $this->getProductMicroData(
             product: $product,
             lang: $this->langService->getLang(),
-            relatedProducts: $relatedProducts
+            relatedProducts: $this->productIds($params['related_products'] ?? null),
+            similarProducts: $this->productIds($params['similar_products'] ?? null),
         );
 
         return $this->getScriptsTag(
@@ -136,90 +136,61 @@ readonly class ProductSEO implements SeoElementInterface
         );
     }
 
-    private function getProductMicroData(Product $product, Lang $lang, $relatedProducts = []): array
+    /**
+     * @return list<int>
+     */
+    private function productIds(mixed $ids): array
     {
-        $request = $this->requestStack->getCurrentRequest();
+        if (null === $ids || '' === $ids) {
+            return [];
+        }
+
+        return array_values(array_map(intval(...), \is_array($ids) ? $ids : $this->explode((string) $ids)));
+    }
+
+    /**
+     * @param list<int> $relatedProducts
+     * @param list<int> $similarProducts
+     *
+     * @return array<string, mixed>
+     */
+    private function getProductMicroData(Product $product, Lang $lang, array $relatedProducts = [], array $similarProducts = []): array
+    {
         $locale = $lang->getLocale();
-
         $product->setLocale($locale);
-        $image = ProductImageQuery::create()->filterByProductId($product->getId())->orderByPosition()->find()->getFirst();
-        $pse = ProductSaleElementsQuery::create()->filterByProductId($product->getId())->filterByIsDefault(1)->findOne();
-        $psePrice = ProductPriceQuery::create()->filterByProductSaleElementsId($pse->getId())->findOne();
-        $taxCountry = $this->taxEngine->getDeliveryCountry();
+        $request = $this->requestStack->getCurrentRequest();
+        $currency = null !== $request && $request->hasSession() ? $request->getSession()->getCurrency() : Currency::getDefaultCurrency();
+        $country = $this->taxEngine->getDeliveryCountry();
 
-        try {
-            $taxedPrice = $product->getTaxedPrice(
-                $taxCountry,
-                $psePrice->getPrice()
-            );
-            if ($pse->getPromo()) {
-                $taxedPrice = $product->getTaxedPromoPrice(
-                    $taxCountry,
-                    $psePrice->getPromoPrice()
-                );
-            }
-        } catch (TaxEngineException) {
-            $taxedPrice = null;
-        }
-
-        $imagePath = null;
-
-        if ($image) {
-            $baseSourceFilePath = ConfigQuery::read('images_library_path');
-            if ($baseSourceFilePath === null) {
-                $baseSourceFilePath = THELIA_LOCAL_DIR.'media'.DS.'images';
-            } else {
-                $baseSourceFilePath = THELIA_ROOT.$baseSourceFilePath;
-            }
-            $event = new ImageEvent();
-            $sourceFilePath = $baseSourceFilePath.'/product/'.$image->getFile();
-
-            $event->setSourceFilepath($sourceFilePath);
-            $event->setCacheSubdirectory('product');
-
-            try {
-                $this->dispatcher->dispatch($event, TheliaEvents::IMAGE_PROCESS);
-                $imagePath = $event->getFileUrl();
-            } catch (\Exception $e) {
-                $imagePath = $image->getFile();
-            }
-        }
+        $image = ProductImageQuery::create()->filterByProductId($product->getId())->filterByVisible(1)->orderByPosition()->findOne();
+        $default = ProductSaleElementsQuery::create()->filterByProductId($product->getId())->filterByIsDefault(1)->findOne();
 
         $microData = [
             '@context' => 'https://schema.org/',
             '@type' => 'Product',
             'name' => $this->localizedValue($product, 'getTitle', $locale),
-            'image' => $imagePath,
+            'image' => null === $image ? null : $this->structuredData->imageUrl($image),
             'description' => $this->localizedValue($product, 'getDescription', $locale),
             'sku' => $product->getRef(),
-            'offers' => [
-                'url' => $product->getUrl(),
-                'priceCurrency' => $request->getSession()->getCurrency()->getCode(),
-                'price' => $taxedPrice,
-                'itemCondition' => 'https://schema.org/NewCondition',
-                'availability' => $pse->getQuantity() > 0 ? 'http://schema.org/InStock' : 'http://schema.org/OutOfStock',
-            ],
         ];
 
-        if ($pse->getEanCode()) {
-            $microData['gtin13'] = $pse->getEanCode();
+        $offers = $this->structuredData->offers($product, $locale, $currency, $country);
+
+        if ([] !== $offers) {
+            $microData['offers'] = $offers;
         }
 
-        $brandTitle = null;
+        $microData += ProductStructuredData::gtin($default?->getEanCode());
 
-        if ($brand = $product->getBrand()) {
-            $brandTitle = BrandI18nQuery::create()
-                ->filterById($brand->getId())
-                ->findOne()
-                ->getTitle();
+        if (null !== ($brand = $product->getBrand())) {
+            $brandTitle = $this->localizedValue($brand, 'getTitle', $locale);
+
+            if ('' !== $brandTitle) {
+                $microData['brand'] = ['@type' => 'Brand', 'name' => $brandTitle];
+            }
         }
 
-        if ($brandTitle) {
-            $microData['brand']['@type'] = 'Brand';
-            $microData['brand']['name'] = $brandTitle;
-        }
-
-        if ($weight = $pse->getWeight()) {
+        if (null !== $default && ($weight = $default->getWeight())) {
             $microData['weight'] = [
                 '@type' => 'QuantitativeValue',
                 'value' => (float) $weight,
@@ -228,10 +199,16 @@ readonly class ProductSEO implements SeoElementInterface
             ];
         }
 
-        if ($relatedProducts) {
-            foreach ($relatedProducts as $relatedProductId) {
-                $relatedProduct = ProductQuery::create()->findPk($relatedProductId);
-                $microData['isRelatedTo'][] = $this->getProductMicroData(product: $relatedProduct, lang: $lang);
+        foreach (['isRelatedTo' => $relatedProducts, 'isSimilarTo' => $similarProducts] as $property => $productIds) {
+            $summaries = $this->structuredData->summaries(
+                array_values(array_diff($productIds, [(int) $product->getId()])),
+                $locale,
+                $currency,
+                $country,
+            );
+
+            if ([] !== $summaries) {
+                $microData[$property] = $summaries;
             }
         }
 
