@@ -49,9 +49,12 @@ readonly class DefaultSEO implements SeoElementInterface
         return 0;
     }
 
+    /**
+     * A page without a model of its own (home, brand, search...) still carries the store.
+     */
     public function getSeoMicroData($id, string $type, array $params = []): string
     {
-        return '';
+        return $this->getScriptsTag(null, $type, $id);
     }
 
     public function getSeoPageTitle($id): string
