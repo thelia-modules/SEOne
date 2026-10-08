@@ -12,6 +12,7 @@
 
 namespace SEOne\Service\SeoDefaultModels;
 
+use Propel\Runtime\ActiveQuery\Criteria;
 use SEOne\Service\MetaTemplate\MetaTemplateField;
 use SEOne\Service\MetaTemplate\MetaTemplateService;
 use SEOne\Service\ProductStructuredData;
@@ -220,8 +221,11 @@ readonly class ProductSEO implements SeoElementInterface
         $breadcrumb = [];
 
         if ($id) {
+            // The path of the default category, as the product page names it: any other one
+            // would depend on the order the rows were written in.
             $productCategory = ProductCategoryQuery::create()
                 ->filterByProductId($id)
+                ->orderByDefaultCategory(Criteria::DESC)
                 ->findOne();
 
             $locale = $this->langService->getLocale();
