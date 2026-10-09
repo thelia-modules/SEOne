@@ -85,9 +85,26 @@ final class ProductStructuredDataTest extends IntegrationTestCase
     }
 
     #[Test]
+    public function declinationsSharingAReferenceAreToldApartByTheirIds(): void
+    {
+        $product = $this->product('Gloves', 20.0);
+        $first = $this->defaultDeclination($product);
+        $first->setRef('GLOVES')->setQuantity(3)->save();
+        $second = $this->declination($product, 'GLOVES', 2, 30.0);
+        $third = $this->declination($product, 'GLOVES', 1, 40.0);
+
+        $offer = fn (?array $ids): array => $this->service()->offers($product, self::LOCALE, Currency::getDefaultCurrency(), Country::getDefaultCountry(), $ids);
+
+        self::assertCount(3, $offer(null), 'no ids named: every visible declination');
+        self::assertSame([$this->taxed($product, 30.0)], array_column($offer([(int) $second->getId()]), 'price'), 'one id: that declination only, not its namesakes');
+        self::assertSame([], $offer([]), 'no id: no offer');
+        self::assertCount(2, $offer([(int) $first->getId(), (int) $third->getId()]));
+    }
+
+    #[Test]
     public function relatedProductsCostTheSameQueriesWhateverTheirNumber(): void
     {
-        $brand = $this->fixtures->brand(['title' => 'Segura']);
+        $brand = $this->fixtures->brand(['title' => 'Acme']);
         $products = [];
 
         for ($i = 1; $i <= 6; ++$i) {
@@ -105,7 +122,7 @@ final class ProductStructuredDataTest extends IntegrationTestCase
 
         $summaries = $this->summaries([$ids[2], $ids[0]]);
         self::assertSame(['Jacket 3', 'Jacket 1'], array_column($summaries, 'name'), 'the order asked');
-        self::assertSame(['@type' => 'Brand', 'name' => 'Segura'], $summaries[0]['brand']);
+        self::assertSame(['@type' => 'Brand', 'name' => 'Acme'], $summaries[0]['brand']);
         self::assertSame($this->taxed($products[2], 103.0), $summaries[0]['offers']['price']);
     }
 
@@ -136,7 +153,7 @@ final class ProductStructuredDataTest extends IntegrationTestCase
     {
         $dispatcher = $this->getService(EventDispatcherInterface::class);
         $listener = static function (SEOneStoreMicroDataEvent $event): void {
-            $event->setStoreMicrodata($event->getStoreMicrodata() + ['sameAs' => ['https://example.com/shop']]);
+            $event->setStoreMicrodata($event->getStoreMicrodata() + ['foundingLocation' => 'Test town']);
         };
         $dispatcher->addListener(SEOneStoreMicroDataEvents::BETTER_SEO_STORE_MICRO_DATA, $listener, -100);
 
@@ -147,7 +164,7 @@ final class ProductStructuredDataTest extends IntegrationTestCase
         }
 
         self::assertStringContainsString('"@type":"LocalBusiness"', $html);
-        self::assertStringContainsString('"sameAs":["https://example.com/shop"]', $html);
+        self::assertStringContainsString('"foundingLocation":"Test town"', $html);
     }
 
     private function product(string $title, float $price, ?int $brandId = null): Product

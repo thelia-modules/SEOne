@@ -48,9 +48,9 @@ use Thelia\Tools\URL;
  */
 final readonly class ProductStructuredData
 {
-    public const string IN_STOCK = 'http://schema.org/InStock';
+    public const string IN_STOCK = 'https://schema.org/InStock';
 
-    public const string OUT_OF_STOCK = 'http://schema.org/OutOfStock';
+    public const string OUT_OF_STOCK = 'https://schema.org/OutOfStock';
 
     public const string NEW_CONDITION = 'https://schema.org/NewCondition';
 
@@ -64,12 +64,19 @@ final readonly class ProductStructuredData
      * One Offer per visible declination, in the merchant's order: its reference as sku, its GTIN,
      * its price in the currency browsed (promotion included, taxes of the country), its stock.
      * A declination without a price in the shop is left out: an offer without a price says nothing.
+     * A shop that sells only some of them names the ids to offer (null: all the visible ones, empty: none).
+     *
+     * @param list<int>|null $declinationIds
      *
      * @return list<array<string, mixed>>
      */
-    public function offers(Product $product, string $locale, Currency $currency, Country $country): array
+    public function offers(Product $product, string $locale, Currency $currency, Country $country, ?array $declinationIds = null): array
     {
         $saleElements = $this->visibleSaleElements([(int) $product->getId()]);
+
+        if (null !== $declinationIds) {
+            $saleElements = array_values(array_filter($saleElements, static fn (ProductSaleElements $declination): bool => \in_array((int) $declination->getId(), $declinationIds, true)));
+        }
 
         if ([] === $saleElements) {
             return [];

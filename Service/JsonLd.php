@@ -19,7 +19,8 @@ namespace SEOne\Service;
  *
  * Its values come from the catalogue and from listeners (a product description, a customer's review):
  * text the shop does not control. A "</script>" in one of them would end the block and let the rest
- * run as HTML. "<" and ">" are written as < and >, which a JSON-LD parser reads back as
+ * run as HTML. "<" and ">" are written as \u003C and \u003E (the JSON escapes of those
+ * characters), which a JSON-LD parser reads back as
  * the same characters. A byte that is no UTF-8 (an old import) is replaced rather than failing the page.
  */
 final class JsonLd
