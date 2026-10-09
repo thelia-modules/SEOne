@@ -17,6 +17,7 @@ namespace SEOne\Tests\Integration\Service;
 use PHPUnit\Framework\Attributes\Test;
 use Propel\Runtime\Connection\ConnectionWrapper;
 use Propel\Runtime\Propel;
+use SEOne\Event\SEOneSpecificEvents\SEOneMicroDataEvent;
 use SEOne\Event\SEOneStoreMicroDataEvent;
 use SEOne\Event\SEOneStoreMicroDataEvents;
 use SEOne\Service\ProductStructuredData;
@@ -99,6 +100,89 @@ final class ProductStructuredDataTest extends IntegrationTestCase
         self::assertSame([$this->taxed($product, 30.0)], array_column($offer([(int) $second->getId()]), 'price'), 'one id: that declination only, not its namesakes');
         self::assertSame([], $offer([]), 'no id: no offer');
         self::assertCount(2, $offer([(int) $first->getId(), (int) $third->getId()]));
+    }
+
+    #[Test]
+    public function anIdOfAnotherProductOrOfAHiddenDeclinationIsNotAnOffer(): void
+    {
+        $product = $this->product('Gloves', 20.0);
+        $default = $this->defaultDeclination($product);
+        $default->setRef('GLOVES')->setQuantity(3)->save();
+        $hidden = $this->declination($product, 'GLOVES-H', 2, 30.0);
+        $hidden->setVisible(false)->save();
+        $other = $this->defaultDeclination($this->product('Helmet', 90.0));
+
+        $offers = $this->service()->offers($product, self::LOCALE, Currency::getDefaultCurrency(), Country::getDefaultCountry(), [(int) $other->getId(), (int) $hidden->getId(), (int) $default->getId()]);
+
+        self::assertSame(['GLOVES'], array_column($offers, 'sku'), 'only the visible declination of this product');
+    }
+
+    #[Test]
+    public function aListenerOfTheMicroDataEventChoosesTheOffersOfThePage(): void
+    {
+        $product = $this->product('Gloves', 20.0);
+        $default = $this->defaultDeclination($product);
+        $default->setRef('GLOVES')->setQuantity(3)->save();
+        $second = $this->declination($product, 'GLOVES', 2, 30.0);
+        $this->declination($product, 'GLOVES', 1, 40.0);
+
+        $offered = static fn (ProductSaleElements ...$declinations): array => array_map(static fn (ProductSaleElements $declination): int => (int) $declination->getId(), $declinations);
+
+        self::assertSame(3, $this->offersOnPage($product, null), 'no listener: every visible declination');
+        self::assertSame(3, $this->offersOnPage($product, ['offered_declinations' => null]), 'null is as absent');
+        self::assertSame(1, $this->offersOnPage($product, ['offered_declinations' => $offered($second)]), 'one id: that declination only');
+        self::assertSame(2, $this->offersOnPage($product, ['offered_declinations' => implode(',', $offered($default, $second))]), 'a comma separated list');
+        self::assertSame(0, $this->offersOnPage($product, ['offered_declinations' => []]), 'empty: no offer');
+        self::assertSame(1, $this->offersOnPage($product, ['offered_declinations' => [$offered($second)[0], $offered($default)[0].'abc', $offered($default)[0] + 0.5, 'abc', null]]), 'anything but an id is ignored');
+    }
+
+    /**
+     * @param array<string, mixed>|null $parameters set by a listener running before the model of SEOne (priority 128)
+     */
+    private function offersOnPage(Product $product, ?array $parameters): int
+    {
+        $dispatcher = $this->getService(EventDispatcherInterface::class);
+        $listener = static function (SEOneMicroDataEvent $event) use ($parameters): void {
+            $event->setParameters($parameters + $event->getParameters());
+        };
+
+        // The listeners of the host application that come before the model of SEOne (priority 128) would answer in place of this test.
+        $hostListeners = [];
+
+        foreach ($dispatcher->getListeners(SEOneMicroDataEvent::BETTER_SEO_MICRO_DATA) as $hostListener) {
+            $priority = $dispatcher->getListenerPriority(SEOneMicroDataEvent::BETTER_SEO_MICRO_DATA, $hostListener);
+
+            if ($priority > 128) {
+                $hostListeners[] = [$hostListener, $priority];
+                $dispatcher->removeListener(SEOneMicroDataEvent::BETTER_SEO_MICRO_DATA, $hostListener);
+            }
+        }
+
+        if (null !== $parameters) {
+            $dispatcher->addListener(SEOneMicroDataEvent::BETTER_SEO_MICRO_DATA, $listener, 129);
+        }
+
+        try {
+            $html = $this->pageMicroData('product', (int) $product->getId());
+        } finally {
+            $dispatcher->removeListener(SEOneMicroDataEvent::BETTER_SEO_MICRO_DATA, $listener);
+
+            foreach ($hostListeners as [$hostListener, $priority]) {
+                $dispatcher->addListener(SEOneMicroDataEvent::BETTER_SEO_MICRO_DATA, $hostListener, $priority);
+            }
+        }
+
+        preg_match_all('#<script[^>]*>(.*?)</script>#s', $html, $blocks);
+
+        foreach ($blocks[1] as $block) {
+            $data = json_decode($block, true, flags: \JSON_THROW_ON_ERROR);
+
+            if ('Product' === ($data['@type'] ?? null)) {
+                return \count($data['offers'] ?? []);
+            }
+        }
+
+        self::fail('no Product in the structured data of the page');
     }
 
     #[Test]

@@ -117,7 +117,7 @@ readonly class ProductSEO implements SeoElementInterface
      * The Product node of the page. Two parameters of the micro data event, which a listener of
      * `better.seo.page.micro.data` can set before this model runs: `related_products` (isRelatedTo)
      * and `similar_products` (isSimilarTo), product ids, an array or a comma separated list; and `offered_declinations`,
-     * the ids of the declinations to offer (every visible one when absent, none when empty).
+     * the ids of the declinations to offer (every visible one when absent or `null`, none when empty).
      */
     public function getSeoMicroData($id, string $type, array $params = []): string
     {
@@ -127,9 +127,9 @@ readonly class ProductSEO implements SeoElementInterface
         $microdata = null === $product ? null : $this->getProductMicroData(
             product: $product,
             lang: $this->langService->getLang(),
-            relatedProducts: $this->productIds($params['related_products'] ?? null),
-            similarProducts: $this->productIds($params['similar_products'] ?? null),
-            offeredDeclinations: \array_key_exists('offered_declinations', $params) ? $this->productIds($params['offered_declinations']) : null,
+            relatedProducts: $this->ids($params['related_products'] ?? null),
+            similarProducts: $this->ids($params['similar_products'] ?? null),
+            offeredDeclinations: isset($params['offered_declinations']) ? $this->ids($params['offered_declinations']) : null,
         );
 
         return $this->getScriptsTag(
@@ -142,13 +142,18 @@ readonly class ProductSEO implements SeoElementInterface
     /**
      * @return list<int>
      */
-    private function productIds(mixed $ids): array
+    private function ids(mixed $ids): array
     {
         if (null === $ids || '' === $ids) {
             return [];
         }
 
-        return array_values(array_map(intval(...), \is_array($ids) ? $ids : $this->explode((string) $ids)));
+        $values = \is_array($ids) ? $ids : $this->explode((string) $ids);
+
+        return array_values(array_map(
+            intval(...),
+            array_filter($values, static fn (mixed $value): bool => \is_int($value) || (\is_string($value) && ctype_digit($value))),
+        ));
     }
 
     /**
