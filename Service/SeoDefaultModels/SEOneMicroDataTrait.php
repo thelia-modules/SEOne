@@ -18,6 +18,7 @@ use SEOne\Event\SEOneStoreMicroDataEvent;
 use SEOne\Event\SEOneStoreMicroDataEvents;
 use SEOne\Model\Seone as SeoneModel;
 use SEOne\SEOne;
+use SEOne\Service\JsonLd;
 use SEOne\Service\SeoRequestMemo;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Thelia\Model\ConfigQuery;
@@ -63,6 +64,12 @@ trait SEOneMicroDataTrait
         return $this->seoRequestMemo->getConfigValue($name, $default, $locale);
     }
 
+    /**
+     * The robots meta of the page, then its structured data: the store, the page's own node and the
+     * json data the merchant typed. The store goes through its event on every page, so that a
+     * listener completes it the same way everywhere; the page's node, when there is one, through
+     * its own.
+     */
     private function getScriptsTag($microdata, ?string $defaultType, $objectId = null): string
     {
         $scriptsTag = '';
@@ -73,30 +80,20 @@ trait SEOneMicroDataTrait
         if (!$lang) {
             $lang = LangQuery::create()->filterByByDefault(1)->findOne();
         }
-        if ($objectId) {
-            $storeEvent = new SEOneStoreMicroDataEvent($storeMicroData, $defaultType,
-                $objectId, $lang->getLocale());
 
-            $this->dispatcher->dispatch(
-                $storeEvent,
-                SEOneStoreMicroDataEvents::BETTER_SEO_STORE_MICRO_DATA);
+        $storeEvent = new SEOneStoreMicroDataEvent($storeMicroData, (string) $defaultType, (int) $objectId, $lang->getLocale());
+        $this->dispatcher->dispatch($storeEvent, SEOneStoreMicroDataEvents::BETTER_SEO_STORE_MICRO_DATA);
+        $storeMicroData = $storeEvent->getStoreMicrodata();
 
-            $storeMicroData = $storeEvent->getStoreMicrodata();
-
-            // No microdata means the SEO target does not exist: the event requires an array, and
-            // there is nothing for listeners to enrich.
-            if (null !== $microdata) {
-                $viewEvent = new SEOneMicroDataEvent($microdata, $defaultType,
-                    $objectId, $lang->getLocale());
-
-                $this->dispatcher->dispatch(
-                    $viewEvent,
-                    SEOneMicroDataEvents::BETTER_SEO_MICRO_DATA);
-                $microdata = $viewEvent->getMicrodata();
-            }
+        // No microdata means the SEO target does not exist: the event requires an array, and
+        // there is nothing for listeners to enrich.
+        if (null !== $microdata && $objectId) {
+            $viewEvent = new SEOneMicroDataEvent($microdata, (string) $defaultType, (int) $objectId, $lang->getLocale());
+            $this->dispatcher->dispatch($viewEvent, SEOneMicroDataEvents::BETTER_SEO_MICRO_DATA);
+            $microdata = $viewEvent->getMicrodata();
         }
 
-        $query = $this->seoRow($defaultType, $objectId, $this->langService->getLocale());
+        $query = null === $objectId || '' === $objectId ? null : $this->seoRow($defaultType, $objectId, $this->langService->getLocale());
 
         if (null !== $query) {
             if ($query->getVirtualColumn('noindex') === 1 && $query->getVirtualColumn('nofollow') === 1) {
@@ -108,9 +105,12 @@ trait SEOneMicroDataTrait
             }
         }
 
-        $scriptsTag .= '<script type="application/ld+json">'.json_encode($storeMicroData, \JSON_UNESCAPED_UNICODE).'</script>';
+        if ([] !== $storeMicroData) {
+            $scriptsTag .= JsonLd::script($storeMicroData);
+        }
+
         if (null !== $microdata) {
-            $scriptsTag .= '<script type="application/ld+json">'.json_encode($microdata, \JSON_UNESCAPED_UNICODE).'</script>';
+            $scriptsTag .= JsonLd::script($microdata);
         }
 
         if (null !== $query && $query->getVirtualColumn('json_data')) {

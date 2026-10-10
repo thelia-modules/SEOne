@@ -31,7 +31,7 @@ use Thelia\Tools\URL;
 readonly class CategorySEO implements SeoElementInterface
 {
     use LocalizedValueTrait;
-    use SeoneBreadcrumbTrait;
+    use SEOneMicroDataTrait;
 
     public function __construct(
         LangService $langService,

@@ -18,11 +18,16 @@ use SEOne\Event\SEOneStoreMicroDataEvent;
 use SEOne\Event\SEOneStoreMicroDataEvents;
 use SEOne\Model\Seone as SeoneModel;
 use SEOne\SEOne;
+use SEOne\Service\JsonLd;
 use SEOne\Service\SeoRequestMemo;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Thelia\Domain\Localization\Service\LangService;
 use Thelia\Model\LangQuery;
 
+/**
+ * @deprecated since 1.4.0, no model of the module uses it any more: use SEOneMicroDataTrait, which
+ *             gives every page the store through its event.
+ */
 trait SeoneBreadcrumbTrait
 {
     private readonly LangService $langService;
@@ -111,9 +116,9 @@ trait SeoneBreadcrumbTrait
             }
         }
 
-        $scriptsTag .= '<script type="application/ld+json">'.json_encode($storeMicroData, \JSON_UNESCAPED_UNICODE).'</script>';
+        $scriptsTag .= JsonLd::script($storeMicroData);
         if (null !== $microdata) {
-            $scriptsTag .= '<script type="application/ld+json">'.json_encode($microdata, \JSON_UNESCAPED_UNICODE).'</script>';
+            $scriptsTag .= JsonLd::script($microdata);
         }
 
         if (null !== $query && $query->getVirtualColumn('json_data')) {
