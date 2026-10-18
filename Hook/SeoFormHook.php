@@ -16,8 +16,6 @@ use Thelia\Model\MetaDataQuery;
 
 class SeoFormHook extends BaseHook
 {
-    use TemplateFallbackTrait;
-
     public function __construct(
         private readonly TheliaFormFactory $formFactory,
         private readonly MetaTemplateService $metaTemplateService,

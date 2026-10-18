@@ -24,8 +24,6 @@ use Thelia\Tools\URL;
 
 class ConfigurationHook extends BaseHook
 {
-    use TemplateFallbackTrait;
-
     /** Records offered for the preview of each page kind; any other one is reachable by its identifier. */
     private const int PREVIEW_RECORD_LIMIT = 50;
 

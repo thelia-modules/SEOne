@@ -13,7 +13,7 @@
 namespace SEOne\Loop;
 
 use Propel\Runtime\ActiveQuery\ModelCriteria;
-use SEOne\Model\Map\SEOneI18nTableMap;
+use SEOne\Model\Map\SeoneI18nTableMap;
 use SEOne\Model\Seone;
 use SEOne\Model\SeoneQuery;
 use Thelia\Core\Template\Element\BaseI18nLoop;
@@ -56,20 +56,20 @@ class SEOneLoop extends BaseI18nLoop implements PropelSearchLoopInterface
             ->useSEOneI18nQuery()
             ->filterByLocale($lang->getLocale())
             ->endUse()
-            ->withColumn(SEOneI18nTableMap::COL_NOINDEX, 'noindex')
-            ->withColumn(SEOneI18nTableMap::COL_NOFOLLOW, 'nofollow')
-            ->withColumn(SEOneI18nTableMap::COL_H1, 'h1')
-            ->withColumn(SEOneI18nTableMap::COL_JSON_DATA, 'json_data');
+            ->withColumn(SeoneI18nTableMap::COL_NOINDEX, 'noindex')
+            ->withColumn(SeoneI18nTableMap::COL_NOFOLLOW, 'nofollow')
+            ->withColumn(SeoneI18nTableMap::COL_H1, 'h1')
+            ->withColumn(SeoneI18nTableMap::COL_JSON_DATA, 'json_data');
 
         for ($i = 1; $i <= 5; ++$i) {
-            if(!defined(SEOneI18nTableMap::class.'::COL_MESH_TEXT_'.$i) ||
-                !defined(SEOneI18nTableMap::class.'::COL_MESH_URL_'.$i) ||
-                !defined(SEOneI18nTableMap::class.'::COL_MESH_'.$i)) {
+            if(!defined(SeoneI18nTableMap::class.'::COL_MESH_TEXT_'.$i) ||
+                !defined(SeoneI18nTableMap::class.'::COL_MESH_URL_'.$i) ||
+                !defined(SeoneI18nTableMap::class.'::COL_MESH_'.$i)) {
                 continue;
             }
-            $query->withColumn(\constant(SEOneI18nTableMap::class.'::COL_MESH_TEXT_'.$i), 'mesh_text_'.$i);
-            $query->withColumn(\constant(SEOneI18nTableMap::class.'::COL_MESH_URL_'.$i), 'mesh_url_'.$i);
-            $query->withColumn(\constant(SEOneI18nTableMap::class.'::COL_MESH_'.$i), 'mesh_'.$i);
+            $query->withColumn(\constant(SeoneI18nTableMap::class.'::COL_MESH_TEXT_'.$i), 'mesh_text_'.$i);
+            $query->withColumn(\constant(SeoneI18nTableMap::class.'::COL_MESH_URL_'.$i), 'mesh_url_'.$i);
+            $query->withColumn(\constant(SeoneI18nTableMap::class.'::COL_MESH_'.$i), 'mesh_'.$i);
         }
 
         return $query;
