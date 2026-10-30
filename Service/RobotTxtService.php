@@ -15,6 +15,7 @@ declare(strict_types=1);
 namespace SEOne\Service;
 
 use Propel\Runtime\ActiveQuery\Criteria;
+use Propel\Runtime\Connection\ConnectionInterface;
 use SEOne\Model\Robots;
 use SEOne\Model\RobotsQuery;
 use SEOne\SEOne;
@@ -48,6 +49,31 @@ class RobotTxtService
                 ->setRobotsContent(SEOne::getDefaultRobotsContent($domainName))
                 ->save();
         }
+    }
+
+    /**
+     * Move to the current default every domain still serving the default of an earlier
+     * version untouched. A robots.txt the administrator edited, even by one line, is theirs
+     * and stays as it is.
+     */
+    public function replaceUntouchedLegacyDefaults(?ConnectionInterface $con = null): void
+    {
+        foreach (RobotsQuery::create()->find($con) as $robot) {
+            $domainName = (string) $robot->getDomainName();
+
+            if (!self::isLegacyDefault((string) $robot->getRobotsContent(), $domainName)) {
+                continue;
+            }
+
+            $robot->setRobotsContent(SEOne::getDefaultRobotsContent($domainName))->save($con);
+        }
+    }
+
+    public static function isLegacyDefault(string $robotsContent, string $domainName): bool
+    {
+        $normalize = static fn (string $content): string => trim(str_replace("\r\n", "\n", $content));
+
+        return $normalize($robotsContent) === $normalize(SEOne::getLegacyDefaultRobotsContent($domainName));
     }
 
     public function saveRobotTxtByDomain(string $domainName, string $robotContent): void
