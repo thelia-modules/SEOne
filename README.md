@@ -10,8 +10,9 @@ page of each record in the back office.
 - Thelia 3.0.0 or later (`Config/module.xml`)
 - PHP 8.3+ (the module uses typed class constants)
 - A front theme that calls the `layout.head.top` and `layout.head.bottom` theme
-  hooks, as Flexy does. On the `main.head-bottom` hook of a classic theme the
-  module prints the robots meta tag, the JSON-LD and the canonical link.
+  hooks, as Flexy does. A theme that still calls the `main.head-bottom` hook gets
+  what `layout.head.bottom` prints (the robots meta tag and the JSON-LD); a theme
+  that calls both gets it once.
 
 ## Installation
 
