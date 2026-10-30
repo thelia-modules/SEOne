@@ -60,6 +60,7 @@ class SEOne extends BaseModule
     public function update($currentVersion, $newVersion, ?ConnectionInterface $con = null): void
     {
         (new MetaTemplateRepository(new SeoRequestMemo()))->removeUnusedSettings($con);
+        (new RobotTxtService())->replaceUntouchedLegacyDefaults($con);
     }
 
     /**
@@ -70,8 +71,39 @@ class SEOne extends BaseModule
      * "Disallow: /admin" line is both useless and a path-disclosure risk — and
      * it is the very line BackOfficePath rewrites on every save, which made the
      * stored value grow by one prefix on each edit.
+     *
+     * The customer area, sign-in and checkout hold nothing a search engine can
+     * use. The redirect and currency parameters are where crawlers get lost:
+     * every page links to the sign-in form with its own address as the return
+     * address, and to itself in every currency, so following those links never
+     * ends (a crawler sent 51,000 such requests to the demo shop in one night).
+     * The lang parameter stays open: the hreflang alternates point to it.
      */
     public static function getDefaultRobotsContent(string $domainName): string
+    {
+        return <<<ROBOTS
+            # robots.txt
+            User-agent: *
+            Disallow: /account
+            Disallow: /address
+            Disallow: /checkout
+            Disallow: /customer
+            Disallow: /login
+            Disallow: /register
+            Disallow: /password
+            Disallow: /order/track
+            Disallow: /*?*redirect=
+            Disallow: /*?*currency=
+
+            Sitemap: {$domainName}/sitemap.xml
+            ROBOTS;
+    }
+
+    /**
+     * Default robots.txt content seeded up to 1.5.0, written for the Thelia 2 front: only
+     * a domain still serving it word for word is moved to the current default.
+     */
+    public static function getLegacyDefaultRobotsContent(string $domainName): string
     {
         return <<<ROBOTS
             # robots.txt
