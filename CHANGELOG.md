@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.6.0
 
 - The `layout.head.top` theme hook takes `og_title` and `og_description`: a page that asks for other words when it is shared gets them in `og:title`, `og:description`, `twitter:title` and `twitter:description`. Without them, these tags keep the title and the description of the page.
 
