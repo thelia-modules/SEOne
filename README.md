@@ -36,6 +36,10 @@ Activation creates the `seone` and `robots` tables and writes a default
 - **Canonical URL.** The current URL without the script name, with `?page=N` kept
   on category and folder pages beyond the first. A canonical typed on a record
   replaces it.
+- **Sharing.** `og:title`, `og:description`, `twitter:title` and
+  `twitter:description` repeat the title and the description, unless the theme
+  passes other words to the `layout.head.top` hook as `og_title` and
+  `og_description`.
 - **hreflang.** One `alternate` link per active, visible language, plus
   `x-default` for the default language. A product, category, content, folder or
   brand page links to the rewritten URL of each language, once the shop agreed

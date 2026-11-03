@@ -1,6 +1,10 @@
 {% set pageTitle = title|default(SEOnePageTitle()) %}
 {% set pageDesc = description|default(SEOnePageDesc()) %}
 {% set pageOgType = og_type|default('website') %}
+{# What a share shows, when the page asks for other words than its title and
+   description; the theme passes them as og_title and og_description. #}
+{% set pageOgTitle = og_title|default(pageTitle) %}
+{% set pageOgDesc = og_description|default(pageDesc) %}
 {% set canonical = SEOnePageCanonical() %}
 
 <title>{{ pageTitle }}</title>
@@ -12,8 +16,8 @@
 
 <meta property="og:type" content="{{ pageOgType }}">
 <meta property="og:url" content="{{ canonical }}">
-<meta property="og:title" content="{{ pageTitle }}">
-<meta property="og:description" content="{{ pageDesc }}">
-<meta name="twitter:title" content="{{ pageTitle }}">
-<meta name="twitter:description" content="{{ pageDesc }}">
+<meta property="og:title" content="{{ pageOgTitle }}">
+<meta property="og:description" content="{{ pageOgDesc }}">
+<meta name="twitter:title" content="{{ pageOgTitle }}">
+<meta name="twitter:description" content="{{ pageOgDesc }}">
 {{ SEOneHreflang()|raw }}
