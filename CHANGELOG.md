@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.1
+
+- The store card of the configuration screen (default title, description and keywords) has its own language selector, shows the values of the chosen edition language and saves into it. It used to show the values of the edition language kept in the session and to save into the language of the back-office itself, so a value typed for another language overwrote the one of the back-office language.
+
 ## 1.6.0
 
 - The `layout.head.top` theme hook takes `og_title` and `og_description`: a page that asks for other words when it is shared gets them in `og:title`, `og:description`, `twitter:title` and `twitter:description`. Without them, these tags keep the title and the description of the page.

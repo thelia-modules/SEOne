@@ -62,8 +62,9 @@ class ConfigurationHook extends BaseHook
         $metaTemplateForm = $this->formFactory->createForm(MetaTemplateForm::getName());
         $metaTemplateForm->createView();
 
-        // The language the templates are shown in is the one the form fills and the controller saves into.
-        $metaTemplateEditLanguage = $this->editionLanguageResolver->resolve();
+        // The language the store card and the templates are shown in is the one their forms fill
+        // and the controller saves into.
+        $editLanguage = $this->editionLanguageResolver->resolve();
 
         $event->add(
             $this->render('SEOne/module_configuration.html.twig', [
@@ -71,8 +72,9 @@ class ConfigurationHook extends BaseHook
                 'category_form' => $categoryForm->getView(),
                 'robot_forms' => $robotForms,
                 'meta_template_form' => $metaTemplateForm->getView(),
-                'meta_template_views' => $this->getMetaTemplateViews((string) $metaTemplateEditLanguage->getLocale()),
-                'meta_template_edit_language_id' => (int) $metaTemplateEditLanguage->getId(),
+                'store_edit_language_id' => (int) $editLanguage->getId(),
+                'meta_template_views' => $this->getMetaTemplateViews((string) $editLanguage->getLocale()),
+                'meta_template_edit_language_id' => (int) $editLanguage->getId(),
                 'meta_template_preview_token' => $this->csrfTokenManager
                     ->getToken(ConfigurationController::META_TEMPLATE_PREVIEW_TOKEN_ID)
                     ->getValue(),
