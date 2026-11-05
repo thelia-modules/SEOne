@@ -1,12 +1,15 @@
 {# ============ Store SEO configuration ============ #}
-<div class="card mb-4">
-    <div class="card-header">
+<div class="card mb-4" id="seone-store">
+    <div class="card-header d-flex align-items-center justify-content-between flex-wrap gap-2">
         <h5 class="card-title mb-0">{{ 'Configure Store'|trans({}, 'seone') }}</h5>
+        {{ component('BoLanguageSwitcher', { currentLanguageId: store_edit_language_id }) }}
     </div>
     <div class="card-body">
+        {% set store_return_url = path('admin.module.configure', {module_code: 'SEOne', edit_language_id: store_edit_language_id}) ~ '#seone-store' %}
         {{ form_start(store_form, {action: path('seone_config_store_configuration'), method: 'POST'}) }}
-            <input type="hidden" name="{{ store_form.vars.full_name }}[success_url]" value="{{ path('admin.module.configure', {module_code: 'SEOne'}) }}">
-            <input type="hidden" name="{{ store_form.vars.full_name }}[error_url]" value="{{ path('admin.module.configure', {module_code: 'SEOne'}) }}">
+            <input type="hidden" name="edit_language_id" value="{{ store_edit_language_id }}">
+            <input type="hidden" name="{{ store_form.vars.full_name }}[success_url]" value="{{ store_return_url }}">
+            <input type="hidden" name="{{ store_form.vars.full_name }}[error_url]" value="{{ store_return_url }}">
             {% do store_form.success_url.setRendered %}
             {% do store_form.error_url.setRendered %}
 

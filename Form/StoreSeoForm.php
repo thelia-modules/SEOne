@@ -3,14 +3,14 @@
 namespace SEOne\Form;
 
 use SEOne\SEOne;
+use SEOne\Service\MetaTemplate\EditionLanguageResolver;
 use Symfony\Component\Form\Extension\Core\Type\TextType;
-use Symfony\Component\HttpFoundation\RequestStack;
 use Thelia\Core\Translation\Translator;
 use Thelia\Form\BaseForm;
 
 class StoreSeoForm extends BaseForm
 {
-    public function __construct(protected RequestStack $requestStack)
+    public function __construct(private readonly EditionLanguageResolver $editionLanguageResolver)
     {
     }
 
@@ -21,7 +21,8 @@ class StoreSeoForm extends BaseForm
 
     protected function buildForm(): void
     {
-        $locale = $this->requestStack->getCurrentRequest()->getSession()->getAdminEditionLang()->getLocale();
+        // The language the controller saves into (see ConfigurationController::saveStoreConfiguration()).
+        $locale = $this->editionLanguageResolver->resolveLocale();
 
         $this->formBuilder
             ->add(
