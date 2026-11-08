@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.6.2
+
+- A structured data block with no data (a listener of `BETTER_SEO_MICRO_DATA` that empties the microdata) prints no `<script type="application/ld+json">` tag any more. It used to print `[]`.
+
 ## 1.6.1
 
 - The store card of the configuration screen (default title, description and keywords) has its own language selector, shows the values of the chosen edition language and saves into it. It used to show the values of the edition language kept in the session and to save into the language of the back-office itself, so a value typed for another language overwrote the one of the back-office language.
