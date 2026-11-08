@@ -22,6 +22,7 @@ namespace SEOne\Service;
  * run as HTML. "<" and ">" are written as \u003C and \u003E (the JSON escapes of those
  * characters), which a JSON-LD parser reads back as
  * the same characters. A byte that is no UTF-8 (an old import) is replaced rather than failing the page.
+ * No data, no block: an empty array prints nothing rather than an empty "[]" block.
  */
 final class JsonLd
 {
@@ -32,6 +33,10 @@ final class JsonLd
      */
     public static function script(array $data): string
     {
+        if ([] === $data) {
+            return '';
+        }
+
         return '<script type="application/ld+json">'.self::encode($data).'</script>';
     }
 
