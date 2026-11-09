@@ -57,6 +57,7 @@ final readonly class ProductStructuredData
     public function __construct(
         private EventDispatcherInterface $dispatcher,
         private TaxCalculatorFactoryInterface $taxCalculators,
+        private VisitorPrices $visitorPrices = new VisitorPrices(),
     ) {
     }
 
@@ -64,6 +65,8 @@ final readonly class ProductStructuredData
      * One Offer per visible declination, in the merchant's order: its reference as sku, its GTIN,
      * its price in the currency browsed (promotion included, taxes of the country), its stock.
      * A declination without a price in the shop is left out: an offer without a price says nothing.
+     * The price is the one the visitor pays when the core resolves it (price list, group), and a product
+     * whose price the visitor is not shown has no offer at all.
      * A shop that sells only some of them names the ids to offer (null: all the visible ones, empty: none).
      *
      * @param list<int>|null $declinationIds
@@ -72,6 +75,10 @@ final readonly class ProductStructuredData
      */
     public function offers(Product $product, string $locale, Currency $currency, Country $country, ?array $declinationIds = null): array
     {
+        if ([] !== $this->visitorPrices->hiddenAmong([(int) $product->getId()])) {
+            return [];
+        }
+
         $saleElements = $this->visibleSaleElements([(int) $product->getId()]);
 
         if (null !== $declinationIds) {
@@ -117,8 +124,8 @@ final readonly class ProductStructuredData
 
     /**
      * A short Product node per visible product, in the order asked: name, address, reference, GTIN of
-     * the default declination, first picture, brand and the offer of the default declination. A product
-     * that is hidden or unknown is left out.
+     * the default declination, first picture, brand and the offer of the default declination, but for a
+     * product whose price the visitor is not shown. A product that is hidden or unknown is left out.
      *
      * @param list<int> $productIds
      *
@@ -152,7 +159,8 @@ final readonly class ProductStructuredData
             $defaults[(int) $saleElements->getProductId()] ??= $saleElements;
         }
 
-        $prices = $this->taxedPrices(array_values($defaults), $products, $currency, $country);
+        $withoutPrice = array_flip($this->visitorPrices->hiddenAmong($visibleIds));
+        $prices = $this->taxedPrices(array_values(array_filter($defaults, static fn (ProductSaleElements $default): bool => !isset($withoutPrice[(int) $default->getProductId()]))), $products, $currency, $country);
         URL::getInstance()->preloadRewrittenUrls('product', $locale, $visibleIds);
         $summaries = [];
 
@@ -265,7 +273,8 @@ final readonly class ProductStructuredData
      * The price a visitor pays for each declination, read in one query: the row of the currency
      * browsed, else the row of the default currency converted at the rates (the rule of
      * ProductSaleElements::getPricesByCurrency()); the promotion price when the declination is on
-     * promotion; with the taxes of the product for the country.
+     * promotion; with the taxes of the product for the country. What the core resolves for the visitor
+     * (a price list, a group price, a discount) replaces that catalogue price.
      *
      * @param list<ProductSaleElements> $saleElements
      * @param array<int, Product>       $products     by id
@@ -295,6 +304,7 @@ final readonly class ProductStructuredData
             $taxRules[(int) $taxRule->getId()] = $taxRule;
         }
 
+        $resolved = $this->visitorPrices->untaxedPrices(array_map(static fn (ProductSaleElements $pse): int => (int) $pse->getId(), $saleElements), $currency);
         $prices = [];
 
         foreach ($saleElements as $pse) {
@@ -306,7 +316,7 @@ final readonly class ProductStructuredData
                 continue;
             }
 
-            $untaxed = $this->untaxedPrice($pse, $own, $default, $currency, $defaultCurrency);
+            $untaxed = $resolved[(int) $pse->getId()] ?? $this->untaxedPrice($pse, $own, $default, $currency, $defaultCurrency);
 
             if (null === $untaxed) {
                 continue;

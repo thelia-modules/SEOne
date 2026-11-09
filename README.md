@@ -49,7 +49,12 @@ Activation creates the `seone` and `robots` tables and writes a default
 - **JSON-LD.** A `LocalBusiness` node for the store, and a node for the page:
   `Product` for a product, `ItemList` for a category, `Article` for a content,
   `Guide` for a folder and for a Page module page. A record can also carry its
-  own JSON-LD, which is printed after the generated ones.
+  own JSON-LD, which is printed after the generated ones. The offers of a
+  `Product` follow what the shop shows the visitor: where a price is shown to
+  identified customers only, or on request, a visitor gets no offer and no
+  amount, and where it is shown, the amount is the one the visitor pays (price
+  list, group price). This needs a Thelia core that has the price display mode;
+  with an older core, every visitor is given the catalogue price.
 - **Breadcrumb.** The category or folder path of the record, available to
   themes and printed as a `BreadcrumbList`.
 
@@ -82,7 +87,9 @@ names an unknown variable is refused.
 | Content | `title`, `description`, `chapo`, `folder_parent_title` |
 | Folder | `title`, `description`, `chapo`, `folder_parent_title` |
 
-`%store_name%` works in every template. An empty variable leaves no stray
+`taxed_price` and `untaxed_price` are those the visitor pays, and are empty where
+the visitor is not shown the price of the product. `%store_name%` works in every
+template. An empty variable leaves no stray
 separator behind. The result is cut on a word boundary at 60 characters for a
 title and 160 for a description; both limits can be changed (10 to 500). A
 preview on the same screen renders a template against a real record.
