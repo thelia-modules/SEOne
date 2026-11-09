@@ -14,8 +14,8 @@ declare(strict_types=1);
 
 namespace SEOne\Service;
 
-use Thelia\Domain\Catalog\Product\VisitorPriceReader;
-use Thelia\Domain\Pricing\PriceVisibility\PriceVisibilityResolver;
+use Psr\Container\ContainerInterface;
+use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
 use Thelia\Model\Currency;
 
 /**
@@ -24,13 +24,22 @@ use Thelia\Model\Currency;
  *
  * Both services are optional: a core that has neither knows only the catalogue price, which every
  * visitor is shown. Then nothing is hidden and no price is resolved, and the callers keep the
- * catalogue price they compute themselves.
+ * catalogue price they compute themselves. They are read from a locator by service id, and no type
+ * of this class names them, so the module loads, and is analysed, against a core that does not
+ * have their classes.
  */
 final readonly class VisitorPrices
 {
+    private const VISIBILITY_RESOLVER = 'Thelia\Domain\Pricing\PriceVisibility\PriceVisibilityResolver';
+
+    private const PRICE_READER = 'Thelia\Domain\Catalog\Product\VisitorPriceReader';
+
     public function __construct(
-        private ?PriceVisibilityResolver $visibility = null,
-        private ?VisitorPriceReader $reader = null,
+        #[AutowireLocator([
+            self::VISIBILITY_RESOLVER => '?'.self::VISIBILITY_RESOLVER,
+            self::PRICE_READER => '?'.self::PRICE_READER,
+        ])]
+        private ?ContainerInterface $coreServices = null,
     ) {
     }
 
@@ -44,11 +53,16 @@ final readonly class VisitorPrices
      */
     public function hiddenAmong(array $productIds): array
     {
-        if (null === $this->visibility || [] === $productIds) {
+        $visibility = $this->coreService(self::VISIBILITY_RESOLVER);
+
+        if (null === $visibility || [] === $productIds || !method_exists($visibility, 'productsWithHiddenPrice')) {
             return [];
         }
 
-        return $this->visibility->productsWithHiddenPrice($productIds, $this->reader?->currentCustomer());
+        $reader = $this->coreService(self::PRICE_READER);
+        $customer = null !== $reader && method_exists($reader, 'currentCustomer') ? $reader->currentCustomer() : null;
+
+        return $visibility->productsWithHiddenPrice($productIds, $customer);
     }
 
     /**
@@ -62,16 +76,29 @@ final readonly class VisitorPrices
      */
     public function untaxedPrices(array $saleElementIds, Currency $currency): array
     {
-        if (null === $this->reader || [] === $saleElementIds) {
+        $reader = $this->coreService(self::PRICE_READER);
+
+        if (null === $reader || [] === $saleElementIds || !method_exists($reader, 'resolve')) {
             return [];
         }
 
         $prices = [];
 
-        foreach ($this->reader->resolve($saleElementIds, $currency) as $saleElementId => $price) {
+        foreach ($reader->resolve($saleElementIds, $currency) as $saleElementId => $price) {
             $prices[$saleElementId] = $price->chargedPrice();
         }
 
         return $prices;
+    }
+
+    private function coreService(string $id): ?object
+    {
+        if (null === $this->coreServices || !$this->coreServices->has($id)) {
+            return null;
+        }
+
+        $service = $this->coreServices->get($id);
+
+        return \is_object($service) ? $service : null;
     }
 }
