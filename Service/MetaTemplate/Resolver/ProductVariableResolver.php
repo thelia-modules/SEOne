@@ -18,6 +18,7 @@ use SEOne\Service\MetaTemplate\HtmlToPlainText;
 use SEOne\Service\MetaTemplate\PreviewRecordsInterface;
 use SEOne\Service\MetaTemplate\VariableResolverInterface;
 use SEOne\Service\SeoDefaultModels\LocalizedValueTrait;
+use SEOne\Service\VisitorPrices;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Thelia\Core\HttpFoundation\Session\Session;
 use Thelia\Core\Template\Helper\FormatService;
@@ -32,7 +33,9 @@ use Thelia\Model\ProductSaleElementsQuery;
 
 /**
  * Variables of a product page. Prices are those of the default sale element, in the currency the
- * visitor browses in, formatted the way the rest of the shop formats money.
+ * visitor browses in, formatted the way the rest of the shop formats money. They are what the visitor
+ * pays when the core resolves it (price list, group), and empty when the visitor is not shown the
+ * price of the product.
  */
 final readonly class ProductVariableResolver implements VariableResolverInterface, PreviewRecordsInterface
 {
@@ -42,6 +45,7 @@ final readonly class ProductVariableResolver implements VariableResolverInterfac
         private RequestStack $requestStack,
         private TaxEngine $taxEngine,
         private FormatService $formatService,
+        private VisitorPrices $visitorPrices = new VisitorPrices(),
     ) {
     }
 
@@ -125,6 +129,10 @@ final readonly class ProductVariableResolver implements VariableResolverInterfac
      */
     private function prices(Product $product, string $locale): array
     {
+        if ([] !== $this->visitorPrices->hiddenAmong([(int) $product->getId()])) {
+            return ['', ''];
+        }
+
         $productSaleElements = ProductSaleElementsQuery::create()
             ->filterByProductId($product->getId())
             ->filterByIsDefault(true)
@@ -148,7 +156,8 @@ final readonly class ProductVariableResolver implements VariableResolverInterfac
             return ['', ''];
         }
 
-        $amount = (bool) $productSaleElements->getPromo() ? $prices->getPromoPrice() : $prices->getPrice();
+        $amount = $this->visitorPrices->untaxedPrices([(int) $productSaleElements->getId()], $currency)[(int) $productSaleElements->getId()]
+            ?? ((bool) $productSaleElements->getPromo() ? $prices->getPromoPrice() : $prices->getPrice());
 
         return [
             $this->taxedPrice($product, $amount, $currency, $locale),

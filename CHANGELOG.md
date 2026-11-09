@@ -1,5 +1,10 @@
 # Changelog
 
+## Unreleased
+
+- The JSON-LD of a product page and of the products it is related or similar to tells the price the visitor is shown. Where the shop or the product shows its prices to identified customers only, or on request, a visitor gets the `Product` node with no `offers`, so no `price`. Where the price is shown, it is the price the core resolves for the visitor (price list, group price, discounts) instead of the catalogue price. A shop that shows every price, and a core that has no price display mode, print what they always did.
+- The `%taxed_price%` and `%untaxed_price%` variables of the meta templates follow the same rule: empty for a visitor who is not shown the price, the price the customer pays otherwise.
+
 ## 1.6.2
 
 - A structured data block with no data (a listener of `BETTER_SEO_MICRO_DATA` that empties the microdata) prints no `<script type="application/ld+json">` tag any more. It used to print `[]`.
