@@ -127,9 +127,12 @@ readonly class SeoToolsService
     {
         $request = $this->getRequest();
 
+        // A value that is not a scalar (`?_view[]=x`) is no page parameter: InputBag::get() would throw on it.
+        $scalar = static fn (array $values): mixed => \is_scalar($values[$key] ?? null) ? $values[$key] : null;
+
         return $request->attributes->get($key)
-            ?? $request->query->get($key)
-            ?? $request->request->get($key);
+            ?? $scalar($request->query->all())
+            ?? $scalar($request->request->all());
     }
 
     public function getPageCanonical(): string
