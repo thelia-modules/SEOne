@@ -16,6 +16,9 @@ use Thelia\Model\MetaDataQuery;
 
 class SeoFormHook extends BaseHook
 {
+    /** The groups of fields of the card, in their order on screen. */
+    public const array FIELD_GROUPS = ['canonical', 'robots', 'h1', 'json_data', 'mesh'];
+
     public function __construct(
         private readonly TheliaFormFactory $formFactory,
         private readonly MetaTemplateService $metaTemplateService,
@@ -35,6 +38,7 @@ class SeoFormHook extends BaseHook
         }
 
         $lang = $this->getSession()->getAdminEditionLang();
+        $shown = $this->shownFields($event->getArgument('fields'));
 
         $event->add(
             $this->render(
@@ -47,9 +51,29 @@ class SeoFormHook extends BaseHook
                     'values' => $this->loadValues($objectId, $objectType, $lang->getLocale()),
                     'canonical' => $this->loadCanonical($objectId, $objectType, $lang->getLocale()),
                     'meta_template_hint' => $this->loadMetaTemplateHint($objectId, $objectType, $lang->getLocale()),
+                    'shown' => $shown,
                 ]
             )
         );
+    }
+
+    /**
+     * The groups of fields the card shows: all of them, unless the screen calling the hook
+     * names some (`fields` argument). A screen that holds the robots and the canonical URL
+     * itself (the page editor of TheliaCMS) asks for the structured data only. A group left
+     * out is posted back as it is stored, so a save in the card does not erase it.
+     *
+     * @return list<string>
+     */
+    private function shownFields(mixed $asked): array
+    {
+        if (!\is_array($asked)) {
+            return self::FIELD_GROUPS;
+        }
+
+        $shown = array_values(array_intersect(self::FIELD_GROUPS, $asked));
+
+        return [] === $shown ? self::FIELD_GROUPS : $shown;
     }
 
     /**

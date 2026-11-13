@@ -1,7 +1,10 @@
 {# SEOne advanced SEO fields, rendered inside the SEO tab (default-twig back office).
    Wrapped in the "SEOne" card by the theme hook_cards() helper, so this template only
-   carries the form. One form, one save: canonical override + robots + H1 + JSON-LD + mesh. #}
+   carries the form. One form, one save: canonical override + robots + H1 + JSON-LD + mesh.
+   `shown` lists the groups the calling screen asked for (SeoFormHook::shownFields()); a group
+   left out is posted back as it is stored, so a save here never erases it. #}
 {% set d = 'seone' %}
+{% set shown = shown|default(['canonical', 'robots', 'h1', 'json_data', 'mesh']) %}
 {% set values = values|default({}) %}
 {% set meta_template_hint = meta_template_hint|default({}) %}
 
@@ -19,13 +22,20 @@
 <form method="post" action="{{ path('seone_seo_save', { object_id: object_id, object_type: object_type, lang_id: edit_language_id }) }}">
     {{ form_widget(form._token) }}
 
-    <p class="text-muted small">{{ 'label.noindex'|trans({}, d) }}</p>
+    {% if 'robots' in shown or 'h1' in shown or 'mesh' in shown %}
+        <p class="text-muted small">{{ 'label.noindex'|trans({}, d) }}</p>
+    {% endif %}
 
+    {% if 'canonical' in shown %}
     <div class="mb-3">
         <label class="form-label" for="seone-canonical">{{ "Surcharge de l'url canonique"|trans({}, d) }}</label>
         <input type="text" id="seone-canonical" name="canonical" value="{{ canonical|default('') }}" class="form-control" placeholder="https://…">
     </div>
+    {% else %}
+        <input type="hidden" name="canonical" value="{{ canonical|default('') }}">
+    {% endif %}
 
+    {% if 'robots' in shown %}
     <div class="form-check">
         <input class="form-check-input" type="checkbox" value="1" id="seone-noindex"
                name="{{ field_name(form.noindex_checkbox) }}"{% if values.noindex|default(0) == 1 %} checked{% endif %}>
@@ -37,17 +47,30 @@
         <label class="form-check-label" for="seone-nofollow">{{ 'nofollow'|trans({}, d) }}</label>
     </div>
     <p class="text-muted small">{{ 'noindex_nofollow.help'|trans({}, d) }}</p>
+    {% else %}
+        {% if values.noindex|default(0) == 1 %}<input type="hidden" name="{{ field_name(form.noindex_checkbox) }}" value="1">{% endif %}
+        {% if values.nofollow|default(0) == 1 %}<input type="hidden" name="{{ field_name(form.nofollow_checkbox) }}" value="1">{% endif %}
+    {% endif %}
 
+    {% if 'h1' in shown %}
     <div class="mb-3">
         <label class="form-label" for="seone-h1">{{ 'h1'|trans({}, d) }}</label>
         <input type="text" id="seone-h1" name="{{ field_name(form.h1) }}" value="{{ values.h1|default('') }}" class="form-control">
     </div>
+    {% else %}
+        <input type="hidden" name="{{ field_name(form.h1) }}" value="{{ values.h1|default('') }}">
+    {% endif %}
 
+    {% if 'json_data' in shown %}
     <div class="mb-3">
         <label class="form-label" for="seone-json">{{ 'JSON structured data'|trans({}, d) }}</label>
         <textarea id="seone-json" name="{{ field_name(form.json_data) }}" rows="6" class="form-control font-monospace">{{ values.json_data|default('') }}</textarea>
     </div>
+    {% else %}
+        <input type="hidden" name="{{ field_name(form.json_data) }}" value="{{ values.json_data|default('') }}">
+    {% endif %}
 
+    {% if 'mesh' in shown %}
     <h4 class="h6 mt-4">{{ 'Mesh'|trans({}, d) }}</h4>
     <div class="table-responsive mb-3">
         <table class="table table-sm align-middle">
@@ -93,6 +116,13 @@
             </tbody>
         </table>
     </div>
+    {% else %}
+        {% for i in 1..5 %}
+            <input type="hidden" name="{{ field_name(attribute(form, 'mesh_' ~ i)) }}" value="{{ values['mesh_' ~ i]|default('') }}">
+            <input type="hidden" name="{{ field_name(attribute(form, 'mesh_text_' ~ i)) }}" value="{{ values['mesh_text_' ~ i]|default('') }}">
+            <input type="hidden" name="{{ field_name(attribute(form, 'mesh_url_' ~ i)) }}" value="{{ values['mesh_url_' ~ i]|default('') }}">
+        {% endfor %}
+    {% endif %}
 
     <button type="submit" class="btn btn-primary">
         <i class="bi bi-check2" aria-hidden="true"></i> {{ 'Save'|trans({}, d) }}
