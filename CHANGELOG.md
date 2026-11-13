@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.8.0
+
+- The screen calling the SEO card chooses the groups of fields it shows, by a `fields` argument of the `tab-seo.bottom` hook: `canonical`, `robots`, `h1`, `json_data`, `mesh`. Without it, the card shows them all, as before. A group left out is posted back as it is stored, so a save in the card does not erase it. The page editor of TheliaCMS, which holds the robots and the canonical URL of a page itself, asks for the structured data only: the two robots checkboxes of SEOne printed a second robots tag there, without the response header nor the removal from the sitemap the page's own setting brings.
+
 ## 1.7.1
 
 - A category page no longer answers HTTP 500 when `page` or `limit` has an unexpected shape in the query string (`?page[]=1`, `?limit[]=1`, `?limit=abc`): the structured data falls back on the first page and on the limit set in the module configuration. A `limit` above 100 is ignored the same way. The page parameters read by the SEO tools of the module (`_view` and the object id) ignore an array value too.
