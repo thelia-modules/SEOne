@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.7.1
+
+- A category page no longer answers HTTP 500 when `page` or `limit` has an unexpected shape in the query string (`?page[]=1`, `?limit[]=1`, `?limit=abc`): the structured data falls back on the first page and on the limit set in the module configuration. A `limit` above 100 is ignored the same way. The page parameters read by the SEO tools of the module (`_view` and the object id) ignore an array value too.
+
 ## 1.7.0
 
 - The JSON-LD of a product page and of the products it is related or similar to tells the price the visitor is shown. Where the shop or the product shows its prices to identified customers only, or on request, a visitor gets the `Product` node with no `offers`, so no `price`. Where the price is shown, it is the price the core resolves for the visitor (price list, group price, discounts) instead of the catalogue price. A shop that shows every price, and a core that has no price display mode, print what they always did.
