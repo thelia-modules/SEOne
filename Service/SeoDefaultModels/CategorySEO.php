@@ -19,6 +19,7 @@ use SEOne\Service\MetaTemplate\MetaTemplateField;
 use SEOne\Service\MetaTemplate\MetaTemplateService;
 use SEOne\Service\SeoRequestMemo;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\RequestStack;
 use Thelia\Domain\Localization\Service\LangService;
 use Thelia\Model\Category;
@@ -32,6 +33,9 @@ readonly class CategorySEO implements SeoElementInterface
 {
     use LocalizedValueTrait;
     use SEOneMicroDataTrait;
+
+    /** The microdata lists the products of one page: a larger value is not a page size anyone asked for. */
+    private const int MAX_LIMIT = 100;
 
     public function __construct(
         LangService $langService,
@@ -68,8 +72,8 @@ readonly class CategorySEO implements SeoElementInterface
         $microdata = null;
         if ($id) {
             $request = $this->requestStack->getCurrentRequest();
-            $page = $params['page'] ?? $request?->query->get('page') ?? 1;
-            $limit = $params['limit'] ?? $request?->query->get('limit') ?? $this->seoConfigValue(SEOne::BETTER_SE0_LIMIT_CONFIG_KEY);
+            $page = $params['page'] ?? $this->queryPositiveInt($request, 'page', \PHP_INT_MAX) ?? 1;
+            $limit = $params['limit'] ?? $this->queryPositiveInt($request, 'limit', self::MAX_LIMIT) ?? $this->seoConfigValue(SEOne::BETTER_SE0_LIMIT_CONFIG_KEY);
 
             $category = CategoryQuery::create()->findPk($id);
 
@@ -79,6 +83,23 @@ readonly class CategorySEO implements SeoElementInterface
         }
 
         return $this->getScriptsTag($microdata, $type, $id);
+    }
+
+    /**
+     * A query string parameter read as an integer from 1 to $max, null when it is absent or malformed
+     * (an array, text, zero, a negative number, too large): the visitor sees the default page or limit.
+     */
+    private function queryPositiveInt(?Request $request, string $name, int $max): ?int
+    {
+        $value = $request?->query->all()[$name] ?? null;
+
+        if (!\is_string($value)) {
+            return null;
+        }
+
+        $number = filter_var($value, \FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => $max]]);
+
+        return false === $number ? null : $number;
     }
 
     public function getSeoBreadcrumb($id): array
