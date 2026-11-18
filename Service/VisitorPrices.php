@@ -16,15 +16,18 @@ namespace SEOne\Service;
 
 use Psr\Container\ContainerInterface;
 use Symfony\Component\DependencyInjection\Attribute\AutowireLocator;
+use Thelia\Core\Security\SecurityContext;
+use Thelia\Model\ConfigQuery;
 use Thelia\Model\Currency;
 
 /**
  * What the visitor of the page is shown, as the core of the shop answers it: whether the price of a
  * product is shown to them at all, and the price they pay.
  *
- * Both services are optional: a core that has neither knows only the catalogue price, which every
- * visitor is shown. Then nothing is hidden and no price is resolved, and the callers keep the
- * catalogue price they compute themselves. They are read from a locator by service id, and no type
+ * Both services are optional: a core that has neither knows only the catalogue price. Then no price
+ * is resolved, and the callers keep the catalogue price they compute themselves; a price is hidden
+ * only when the setting `price_display_mode` of the shop says so for the whole shop (a showcase
+ * site sets it to `on_request`). They are read from a locator by service id, and no type
  * of this class names them, so the module loads, and is analysed, against a core that does not
  * have their classes.
  */
@@ -34,10 +37,18 @@ final readonly class VisitorPrices
 
     private const PRICE_READER = 'Thelia\Domain\Catalog\Product\VisitorPriceReader';
 
+    /**
+     * The setting of the shop the resolver of the core reads (`visible`, `logged_in`, `on_request`). A
+     * core without the resolver (3.3) has no use for it, but a showcase site sets it all the same
+     * (TheliaCMS): it is read here then, for the whole shop.
+     */
+    private const SHOP_SETTING = 'price_display_mode';
+
     public function __construct(
         #[AutowireLocator([
             self::VISIBILITY_RESOLVER => '?'.self::VISIBILITY_RESOLVER,
             self::PRICE_READER => '?'.self::PRICE_READER,
+            SecurityContext::class => '?'.SecurityContext::class,
         ])]
         private ?ContainerInterface $coreServices = null,
     ) {
@@ -53,10 +64,14 @@ final readonly class VisitorPrices
      */
     public function hiddenAmong(array $productIds): array
     {
+        if ([] === $productIds) {
+            return [];
+        }
+
         $visibility = $this->coreService(self::VISIBILITY_RESOLVER);
 
-        if (null === $visibility || [] === $productIds || !method_exists($visibility, 'productsWithHiddenPrice')) {
-            return [];
+        if (null === $visibility || !method_exists($visibility, 'productsWithHiddenPrice')) {
+            return $this->shopHidesPrices() ? array_values(array_unique(array_map('intval', $productIds))) : [];
         }
 
         $reader = $this->coreService(self::PRICE_READER);
@@ -89,6 +104,26 @@ final readonly class VisitorPrices
         }
 
         return $prices;
+    }
+
+    /**
+     * Whether the setting of the shop hides every price from this visitor, on a core that has no
+     * resolver to ask: unset, or holding a value this module does not know, it shows them.
+     */
+    private function shopHidesPrices(): bool
+    {
+        return match ((string) ConfigQuery::read(self::SHOP_SETTING, 'visible')) {
+            'on_request' => true,
+            'logged_in' => !$this->customerSignedIn(),
+            default => false,
+        };
+    }
+
+    private function customerSignedIn(): bool
+    {
+        $securityContext = $this->coreService(SecurityContext::class);
+
+        return $securityContext instanceof SecurityContext && $securityContext->hasAuthenticatedCustomerUser();
     }
 
     private function coreService(string $id): ?object

@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.8.1
+
+- On a core that has no price display mode of its own (3.3), the setting `price_display_mode` of the shop is read for the whole shop: `on_request` (what TheliaCMS sets on a showcase site) leaves the `offers` out of the JSON-LD of every product and empties the price variables of the meta templates, and so does `logged_in` for a visitor who did not sign in. A shop without the setting prints what it always did.
+
 ## 1.8.0
 
 - The screen calling the SEO card chooses the groups of fields it shows, by a `fields` argument of the `tab-seo.bottom` hook: `canonical`, `robots`, `h1`, `json_data`, `mesh`. Without it, the card shows them all, as before. A group left out is posted back as it is stored, so a save in the card does not erase it. The page editor of TheliaCMS, which holds the robots and the canonical URL of a page itself, asks for the structured data only: the two robots checkboxes of SEOne printed a second robots tag there, without the response header nor the removal from the sitemap the page's own setting brings.
